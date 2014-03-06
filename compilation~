@@ -1,0 +1,1 @@
+g++ smt.cpp -lgmp -lgmpxx -lrt -O3 -o fast
