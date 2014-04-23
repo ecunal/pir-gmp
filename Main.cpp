@@ -1,52 +1,48 @@
 #include "Client.h"
-#include <cmath>
+#include "Server.h"
 
 using namespace std;
 
-#define FILE_SIZE 512
+#define FILE_SIZE 256
 #define BIT_LENGTH 1024
 
 int main() {
 
-//	int s = (int) log2(FILE_SIZE);
-	int s = 3;
+	int s = (int) log2(FILE_SIZE);
+//	int s = 7;
+	TreeType tree = BINARY;
+	mpz_t n, g, cipher, decr;
+	mpz_inits(n, g, cipher, decr, NULL);
 
-	Client c(s, BIT_LENGTH, OCTO);
+	Client client(s, BIT_LENGTH, tree);
+	client.get_pub_keys(n, g);
 
-	unsigned char s_bits[] = { 1, 1, 1, 1, 0, 1, 0, 0, 0 };
-	mpz_t *results = new mpz_t[7 * s];
+	cout << "client created" << endl;
 
-	for (int i = 0; i < 7 * s; i++) {
+	Server server(BIT_LENGTH, s, FILE_SIZE, tree, n, g);
+
+	cout << "server created" << endl;
+
+	unsigned char s_bits[] = { 1, 1, 1, 1, 1, 1, 1, 1 };
+	mpz_t *results = new mpz_t[s];
+
+	for (int i = 0; i < s; i++) {
 		mpz_init(results[i]);
 	}
 
-	c.encrypt_s_bits(results, 7 * s, s_bits, 3 * s);
+	cout << "selection bits initalized" << endl;
 
-	int r_i = 0;
+	client.encrypt_s_bits(results, s, s_bits, s);
 
-	for (int i = 0; i < s; i++) {
+	cout << "selection bits generated" << endl;
 
-		mpz_t *decr = new mpz_t[7];
+	server.get_file_it(cipher, results, s);
 
-		for (int j = 0; j < 7; j++) {
-			mpz_init(decr[j]);
-		}
+	cout << "server file encryption" << endl;
 
-		c.dj->set_s(i + 1);
+	client.decr_file(decr, cipher);
 
-		for (int j = 0; j < 7; j++) {
-
-			c.dj->decrypt(decr[j], results[r_i]);
-			cout << decr[j] << endl;
-			r_i++;
-		}
-
-		cout << "decrypted" << endl;
-
-		for (int j = 0; j < 7; j++) {
-			mpz_clear(decr[j]);
-		}
-	}
+	cout << "decrypted: " << decr << endl;
 
 	return 0;
 }

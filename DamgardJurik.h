@@ -1,7 +1,14 @@
+#ifndef DAMGARDJURIK_H
+#define DAMGARDJURIK_H
+
 #include <gmp.h>
 #include <iostream>
 #include <fcntl.h> 
 #include <unistd.h>
+
+enum TreeType {
+	BINARY, QUAD, OCTO
+};
 
 class DamgardJurik {
 	
@@ -15,7 +22,6 @@ public:
 	
 	mpz_t n, n_s, n_sp, g;
 	int bit_length, s;
-	DamgardJurik();
 	DamgardJurik(int bit_length, int s);
 	DamgardJurik(int bit_length, int s, mpz_t n, mpz_t g);
 	
@@ -32,3 +38,5 @@ public:
 	void get_random_prime(mpz_t result);
 	
 };
+
+#endif

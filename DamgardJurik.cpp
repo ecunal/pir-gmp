@@ -2,16 +2,6 @@
 
 using namespace std;
 
-DamgardJurik::DamgardJurik(){
-
-	s = 1;
-	enc_only = false;
-	bit_length = 1024;
-
-	mpz_inits(n, n_s, n_sp, g, p, q, d, mu, NULL);
-	keygen();
-}
-
 DamgardJurik::DamgardJurik(int bit_length, int s) {
 
 	this->bit_length = bit_length;
@@ -26,10 +16,11 @@ DamgardJurik::DamgardJurik(int bit_length, int s) {
 
 DamgardJurik::DamgardJurik(int bit_length, int s, mpz_t n, mpz_t g) {
 
-	mpz_inits(n, n_s, n_sp, g, NULL);
+	mpz_inits(this->n, this-> g, n_s, n_sp, NULL);
 
 	mpz_set(this->n, n);
 	mpz_set(this->g, g);
+
 	this->s = s;
 	this->bit_length = bit_length;
 
@@ -149,7 +140,7 @@ void DamgardJurik::find_i(mpz_t result, const mpz_t c) {
 
 			mpz_t nkm1; // n^(k-1)
 			mpz_init(nkm1);
-			mpz_pow_ui(nkm1, n, k-1);
+			mpz_pow_ui(nkm1, n, k - 1);
 
 			mpz_mul(f, f, nkm1);
 			mpz_mod(f, f, nj);
@@ -166,51 +157,35 @@ void DamgardJurik::find_i(mpz_t result, const mpz_t c) {
 
 	}
 
+	mpz_set(result, i);
+
 }
 
 void DamgardJurik::decrypt(mpz_t result, const mpz_t c) {
 
-	mpz_t temp1;
-	mpz_init(temp1);
+	mpz_t temp1, temp2, temp3;
+	mpz_inits(temp1, temp2, temp3, NULL);
 
 	mpz_powm(temp1, c, d, n_sp);
-	find_i(temp1, temp1);
+	find_i(temp2, temp1);
 
-	mpz_mul(result, temp1, mu);
-	mpz_mod(result, result, n_s);
+	mpz_mul(temp3, temp2, mu);
+	mpz_mod(result, temp3, n_s);
 
+	mpz_clears(temp1, temp2, temp3, NULL);
 }
 
 void DamgardJurik::set_s(int s) {
+
+	if (this->s == s)
+		return;
 
 	this->s = s;
 	mpz_pow_ui(n_s, n, s);
 	mpz_mul(n_sp, n, n_s);
 
-	if(!enc_only) {
+	if (!enc_only) {
 		mpz_invert(mu, d, n_s);
 	}
 
-}
-
-int main() {
-
-	DamgardJurik dj(1024, 1);
-
-	mpz_t plain, cipher;
-	mpz_inits(plain, cipher, NULL);
-
-	mpz_set_ui(plain, 15);
-
-	cout << plain << endl;
-
-	dj.encrypt(cipher, plain);
-
-	cout << cipher << endl;
-
-	dj.decrypt(plain, cipher);
-
-	cout << "decrypted: " << plain << endl;
-
-	return 0;
 }

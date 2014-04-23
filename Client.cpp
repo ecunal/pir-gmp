@@ -8,8 +8,6 @@ Client::Client(int m_s, int b_length, TreeType t) {
 	tree = t;
 	bit_length = b_length;
 
-	// Initialize DamgardJurik
-
 	dj = new DamgardJurik(b_length, 1);
 }
 
@@ -18,6 +16,29 @@ void Client::get_pub_keys(mpz_t n, mpz_t g) {
 	mpz_set(n, dj->n);
 	mpz_set(g, dj->g);
 
+}
+
+void Client::decr_file(mpz_t dec, mpz_t file) {
+
+	mpz_t *decr_array = new mpz_t[max_s];
+	int s = max_s;
+
+	for (int i=0; i < max_s; i++) {
+
+		mpz_init(decr_array[i]);
+
+		dj->set_s(s);
+
+		if(i > 0) {
+			dj->decrypt(decr_array[i], decr_array[i-1]);
+		} else {
+			dj->decrypt(decr_array[i], file);
+		}
+
+		s--;
+	}
+
+	mpz_set(dec, decr_array[max_s-1]);
 }
 
 void Client::encrypt_s_bits(mpz_t result[], int result_length,
@@ -98,8 +119,6 @@ void Client::encrypt_s_bits(mpz_t result[], int result_length,
 				mpz_init(enc[j]);
 			}
 
-			cout << "initalized" << endl;
-
 			mpz_set_ui(x[2], s_bits[i]);
 			mpz_set_ui(x[1], s_bits[i + 1]);
 			mpz_set_ui(x[0], s_bits[i + 2]);
@@ -110,22 +129,16 @@ void Client::encrypt_s_bits(mpz_t result[], int result_length,
 
 			mpz_mul(x[6], x[3], x[2]);
 
-			cout << "set initial values" << endl;
-
 			for (int j = 6; j >= 0; j--) {
 				dj->encrypt(enc[j], x[j]);
 				mpz_set(result[r_i], enc[j]);
 				r_i--;
 			}
 
-			cout << "encrypted & set" << endl;
-
 			for (int j = 0; j < 7; j++) {
 				mpz_clear(x[j]);
 				mpz_clear(enc[j]);
 			}
-
-			cout << "cleared" << endl;
 
 			temp_s--;
 		}
