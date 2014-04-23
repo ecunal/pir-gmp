@@ -23,14 +23,14 @@ void Client::decr_file(mpz_t dec, mpz_t file) {
 	mpz_t *decr_array = new mpz_t[max_s];
 	int s = max_s;
 
-	for (int i=0; i < max_s; i++) {
+	for (int i = 0; i < max_s; i++) {
 
 		mpz_init(decr_array[i]);
 
 		dj->set_s(s);
 
-		if(i > 0) {
-			dj->decrypt(decr_array[i], decr_array[i-1]);
+		if (i > 0) {
+			dj->decrypt(decr_array[i], decr_array[i - 1]);
 		} else {
 			dj->decrypt(decr_array[i], file);
 		}
@@ -38,7 +38,7 @@ void Client::decr_file(mpz_t dec, mpz_t file) {
 		s--;
 	}
 
-	mpz_set(dec, decr_array[max_s-1]);
+	mpz_set(dec, decr_array[max_s - 1]);
 }
 
 void Client::encrypt_s_bits(mpz_t result[], int result_length,
@@ -50,6 +50,12 @@ void Client::encrypt_s_bits(mpz_t result[], int result_length,
 
 		cout << "binary tree, encrypting selection bits" << endl;
 
+		clock_t begin, end;
+		double time_spent;
+
+		begin = clock();
+
+		#pragma omp parallel for
 		for (int i = 0; i < s_bit_length; i++) {
 
 			dj->set_s(temp_s);
@@ -67,6 +73,12 @@ void Client::encrypt_s_bits(mpz_t result[], int result_length,
 
 			temp_s--;
 		}
+
+		end = clock();
+
+		time_spent = (double) (end - begin) * 1000 / CLOCKS_PER_SEC;
+
+		cout << "enc of selection bits: " << time_spent << endl;
 
 	} else if (tree == QUAD) {
 

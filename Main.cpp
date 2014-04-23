@@ -3,7 +3,7 @@
 
 using namespace std;
 
-#define FILE_SIZE 256
+#define FILE_SIZE 64
 #define BIT_LENGTH 1024
 
 int main() {
@@ -23,7 +23,7 @@ int main() {
 
 	cout << "server created" << endl;
 
-	unsigned char s_bits[] = { 1, 1, 1, 1, 1, 1, 1, 1 };
+	unsigned char s_bits[] = { 1, 0, 1, 1, 0, 1 };
 	mpz_t *results = new mpz_t[s];
 
 	for (int i = 0; i < s; i++) {
