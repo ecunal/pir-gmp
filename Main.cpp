@@ -36,13 +36,13 @@ int main() {
 
 	cout << "selection bits generated" << endl;
 
-	server.get_file_it(cipher, results, s);
-
-	cout << "server file encryption" << endl;
-
-	client.decr_file(decr, cipher);
-
-	cout << "decrypted: " << decr << endl;
+//	server.get_file_it(cipher, results, s);
+//
+//	cout << "server file encryption" << endl;
+//
+//	client.decr_file(decr, cipher);
+//
+//	cout << "decrypted: " << decr << endl;
 
 	return 0;
 }

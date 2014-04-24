@@ -50,35 +50,41 @@ void Client::encrypt_s_bits(mpz_t result[], int result_length,
 
 		cout << "binary tree, encrypting selection bits" << endl;
 
-		clock_t begin, end;
-		double time_spent;
+		DamgardJurik *djs[s_bit_length];
 
-		begin = clock();
+		for (int i = 0; i < s_bit_length; i++) {
+			djs[i] = new DamgardJurik(dj->bit_length, temp_s, dj->n, dj->g);
+			temp_s--;
+		}
+
+//		clock_t begin, end;
+//		double time_spent;
+//
+//		begin = clock();
+
+		double start_time = omp_get_wtime();
 
 		#pragma omp parallel for
 		for (int i = 0; i < s_bit_length; i++) {
-
-			dj->set_s(temp_s);
 
 			mpz_t enc, m;
 			mpz_inits(enc, m, NULL);
 
 			mpz_set_ui(m, s_bits[i]);
 
-			dj->encrypt(enc, m);
+			djs[i]->encrypt(enc, m);
 
 			mpz_set(result[s_bit_length - i - 1], enc);
 
 			mpz_clears(enc, m, NULL);
 
-			temp_s--;
 		}
 
-		end = clock();
+		double end_time = omp_get_wtime();
 
-		time_spent = (double) (end - begin) * 1000 / CLOCKS_PER_SEC;
+		double time_elapsed = end_time - start_time;
 
-		cout << "enc of selection bits: " << time_spent << endl;
+		cout << "enc of selection bits: " << time_elapsed << endl;
 
 	} else if (tree == QUAD) {
 

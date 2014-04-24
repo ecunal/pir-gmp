@@ -6,6 +6,7 @@
 #include <fcntl.h> 
 #include <unistd.h>
 #include <inttypes.h>
+#include <omp.h>
 
 enum TreeType {
 	BINARY, QUAD, OCTO
