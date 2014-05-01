@@ -22,6 +22,6 @@ private:
 public:
 	Server(int b_length, int s, int file_size, TreeType t, mpz_t n, mpz_t g);
 
-	void get_file_it(mpz_t result, mpz_t s_bits[], int s_length);
-	void get_file_par(mpz_t result, mpz_t s_bits[], int s_length);
+	// if parallel = 0 then it is iterative.
+	void get_file(mpz_t result, mpz_t s_bits[], int s_length, int parallel);
 };

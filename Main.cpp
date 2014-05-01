@@ -8,6 +8,25 @@ using namespace std;
 
 int main() {
 
+/*	#pragma omp parallel for
+	for(int i=0; i<5; i++){
+
+		cout << i << " sth1" << endl;
+
+			#pragma omp task
+			{
+				cout << i << " sth2" << endl;
+			}
+			#pragma omp task
+			{
+				cout << i << " sth3" << endl;
+			}
+			#pragma omp taskwait
+
+		cout << i << " sth4" << endl;
+
+	} */
+
 	int s = (int) log2(FILE_SIZE);
 //	int s = 7;
 	TreeType tree = BINARY;
@@ -36,9 +55,8 @@ int main() {
 
 	cout << "selection bits generated" << endl;
 
-	server.get_file_it(cipher1, results, s);
-
-	server.get_file_par(cipher2, results, s);
+	server.get_file(cipher1, results, s, 0); // iterative
+	server.get_file(cipher2, results, s, 1); // parallel
 
 	cout << "server file encrypted" << endl;
 
