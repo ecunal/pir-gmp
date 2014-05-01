@@ -11,8 +11,8 @@ int main() {
 	int s = (int) log2(FILE_SIZE);
 //	int s = 7;
 	TreeType tree = BINARY;
-	mpz_t n, g, cipher, decr;
-	mpz_inits(n, g, cipher, decr, NULL);
+	mpz_t n, g, cipher1, cipher2, decr1, decr2;
+	mpz_inits(n, g, cipher1, cipher2, decr1, decr2, NULL);
 
 	Client client(s, BIT_LENGTH, tree);
 	client.get_pub_keys(n, g);
@@ -36,13 +36,17 @@ int main() {
 
 	cout << "selection bits generated" << endl;
 
-//	server.get_file_it(cipher, results, s);
-//
-//	cout << "server file encryption" << endl;
-//
-//	client.decr_file(decr, cipher);
-//
-//	cout << "decrypted: " << decr << endl;
+	server.get_file_it(cipher1, results, s);
+
+	server.get_file_par(cipher2, results, s);
+
+	cout << "server file encrypted" << endl;
+
+	client.decr_file(decr1, cipher1);
+	client.decr_file(decr2, cipher2);
+
+	cout << "decrypted 1: " << decr1 << endl;
+	cout << "decrypted 2: " << decr2 << endl;
 
 	return 0;
 }

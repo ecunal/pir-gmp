@@ -57,11 +57,6 @@ void Client::encrypt_s_bits(mpz_t result[], int result_length,
 			temp_s--;
 		}
 
-//		clock_t begin, end;
-//		double time_spent;
-//
-//		begin = clock();
-
 		double start_time = omp_get_wtime();
 
 		#pragma omp parallel for

@@ -70,6 +70,8 @@ void Server::get_file_it(mpz_t result, mpz_t s_bits[], int s_length) {
 
 			int r_i = 0;
 
+			double start_time = omp_get_wtime();
+
 			for (int j = 0; j < temp_size; j++) {
 
 				mpz_t f0, f1, subf, R0, R1, R2;
@@ -92,6 +94,105 @@ void Server::get_file_it(mpz_t result, mpz_t s_bits[], int s_length) {
 
 				mpz_clears(f0, f1, subf, R0, R1, R2, NULL);
 			}
+
+			double end_time = omp_get_wtime();
+
+			double time_elapsed = end_time - start_time;
+
+			cout << "enc of files " << i << ": " << time_elapsed << endl;
+
+			for (int j = 0; j < r_size; j++) {
+				mpz_clear(R[j]);
+			}
+
+			delete[] R;
+
+			r_size = temp_size;
+			R = new mpz_t[r_size];
+
+			for (int j = 0; j < r_size; j++) {
+				mpz_init_set(R[j], temp[j]);
+			}
+
+			for(int j=0; j<temp_size; j++)  {
+				mpz_clear(temp[j]);
+			}
+
+			delete [] temp;
+
+		} // end of all depths
+
+		cout << "end of all depths, R size: " << r_size << endl;
+
+		mpz_set(result, R[0]);
+
+		delete [] R;
+
+	} // end of binary case
+
+}
+
+void Server::get_file_par(mpz_t result, mpz_t s_bits[], int s_length) {
+
+	if (tree == BINARY) {
+
+		int depth = (int) log2(f_size);
+
+		mpz_t *R = new mpz_t[f_size];
+		mpz_t *temp;
+
+		for (int i = 0; i < f_size; i++) {
+			mpz_init_set(R[i], files[i]);
+		}
+
+		int r_size = f_size, temp_size;
+
+		for (int i = 0; i < depth; i++) {
+
+			temp_size = f_size / pow(2, i + 1);
+			temp = new mpz_t[temp_size];
+
+			for (int j = 0; j < temp_size; j++) {
+				mpz_init(temp[j]);
+			}
+
+			dj->set_s(i+1);
+
+			cout << "depth " << i << ", r size: " << r_size << endl;
+
+			int r_i = 0;
+
+			double start_time = omp_get_wtime();
+
+			#pragma omp parallel for
+			for (int j = 0; j < temp_size; j++) {
+
+				mpz_t f0, f1, subf, R0, R1, R2;
+				mpz_inits(f0, f1, subf, R0, R1, R2, NULL);
+
+				mpz_set(f0, R[r_i]);
+				r_i++;
+				mpz_set(f1, R[r_i]);
+				r_i++;
+
+				dj->encrypt(R0, f0);
+
+				mpz_sub(subf, f1, f0);
+				mpz_powm(R1, s_bits[i], subf, dj->n_sp);
+
+				mpz_mul(R2, R0, R1);
+				mpz_mod(R2, R2, dj->n_sp);
+
+				mpz_set(temp[j], R2);
+
+				mpz_clears(f0, f1, subf, R0, R1, R2, NULL);
+			}
+
+			double end_time = omp_get_wtime();
+
+			double time_elapsed = end_time - start_time;
+
+			cout << "enc of files " << i << ": " << time_elapsed << endl;
 
 			for (int j = 0; j < r_size; j++) {
 				mpz_clear(R[j]);
