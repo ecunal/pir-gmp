@@ -14,7 +14,7 @@ using namespace std;
 
 int main() {
 
-	// BINARY ITERATIVE
+	// BINARY DUZ PARALLEL
 
 	TreeType tree = BINARY;
 
@@ -22,7 +22,7 @@ int main() {
 
 		int file_size = (int) pow(2, s);
 
-		int TEST_CASES = (int) pow(2, (11-s));
+		int TEST_CASES = (s < 7) ? (int) pow(2, (11-s)) : 20;
 
 		cout << TEST_CASES << endl;
 
@@ -47,14 +47,14 @@ int main() {
 			}
 
 			c_enc_time += client.encrypt_s_bits(results, s, s_bits, s);
-			s_enc_time += server.get_file(cipher, results, s, 0); // 0: iterative
+			s_enc_time += server.get_file(cipher, results, s, 1); // 1: parallel
 			c_decr_time += client.decr_file(decr, cipher);
 
 		}
 
 		cout << "file size " << file_size << endl;
 		cout << "client encryption (prl): " << (c_enc_time / TEST_CASES) << endl;
-		cout << "server encryption (iter): " << (s_enc_time / TEST_CASES) << endl;
+		cout << "server encryption (prl): " << (s_enc_time / TEST_CASES) << endl;
 		cout << "client decryption: " << (c_decr_time / TEST_CASES) << "\n" << endl;
 	}
 

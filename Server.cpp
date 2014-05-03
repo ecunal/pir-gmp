@@ -73,7 +73,7 @@ double Server::get_file(mpz_t result, mpz_t s_bits[], int s_length, int parallel
 
 			double start_time = omp_get_wtime();
 
-			#pragma omp parallel for schedule(dynamic) if(parallel)
+			#pragma omp parallel for if(parallel)
 			for (int j = 0; j < temp_size; j++) {
 
 				mpz_t f0, f1, subf, R0, R1, R2;
