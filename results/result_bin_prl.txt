@@ -1,0 +1,54 @@
+1024
+file size 2
+client encryption (prl): 0.00330028
+server encryption (prl): 0.00343435
+client decryption: 0.00326016
+
+512
+file size 4
+client encryption (prl): 0.0141594
+server encryption (prl): 0.0370823
+client decryption: 0.00883352
+
+256
+file size 8
+client encryption (prl): 0.0357835
+server encryption (prl): 0.1246
+client decryption: 0.0181044
+
+128
+file size 16
+client encryption (prl): 0.0601272
+server encryption (prl): 0.283054
+client decryption: 0.031137
+
+64
+file size 32
+client encryption (prl): 0.0964613
+server encryption (prl): 0.581005
+client decryption: 0.0490512
+
+32
+file size 64
+client encryption (prl): 0.144937
+server encryption (prl): 1.13406
+client decryption: 0.072433
+
+20
+file size 128
+client encryption (prl): 0.206841
+server encryption (prl): 2.18426
+client decryption: 0.10108
+
+20
+file size 256
+client encryption (prl): 0.285144
+server encryption (prl): 4.15952
+client decryption: 0.136032
+
+20
+file size 512
+client encryption (prl): 0.387244
+server encryption (prl): 8.00157
+client decryption: 0.179052
+
