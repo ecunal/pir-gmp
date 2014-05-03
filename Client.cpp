@@ -18,11 +18,12 @@ void Client::get_pub_keys(mpz_t n, mpz_t g) {
 
 }
 
-void Client::decr_file(mpz_t dec, mpz_t file) {
+double Client::decr_file(mpz_t dec, mpz_t file) {
 
 	mpz_t *decr_array = new mpz_t[max_s];
 	int s = max_s;
 
+	double start_time = omp_get_wtime();
 	for (int i = 0; i < max_s; i++) {
 
 		mpz_init(decr_array[i]);
@@ -37,18 +38,22 @@ void Client::decr_file(mpz_t dec, mpz_t file) {
 
 		s--;
 	}
+	double end_time = omp_get_wtime();
 
 	mpz_set(dec, decr_array[max_s - 1]);
+
+	return end_time - start_time;
 }
 
-void Client::encrypt_s_bits(mpz_t result[], int result_length,
+double Client::encrypt_s_bits(mpz_t result[], int result_length,
 		unsigned char s_bits[], int s_bit_length) {
 
 	int temp_s = max_s;
+	double time_elapsed = 0;
 
 	if (tree == BINARY) {
 
-		cout << "binary tree, encrypting selection bits" << endl;
+	//	cout << "binary tree, encrypting selection bits" << endl;
 
 		DamgardJurik *djs[s_bit_length];
 
@@ -59,7 +64,7 @@ void Client::encrypt_s_bits(mpz_t result[], int result_length,
 
 		double start_time = omp_get_wtime();
 
-		#pragma omp parallel for
+		#pragma omp parallel for schedule(dynamic)
 		for (int i = 0; i < s_bit_length; i++) {
 
 			mpz_t enc, m;
@@ -77,9 +82,7 @@ void Client::encrypt_s_bits(mpz_t result[], int result_length,
 
 		double end_time = omp_get_wtime();
 
-		double time_elapsed = end_time - start_time;
-
-		cout << "enc of selection bits: " << time_elapsed << endl;
+		time_elapsed = end_time - start_time;
 
 	} else if (tree == QUAD) {
 
@@ -157,5 +160,7 @@ void Client::encrypt_s_bits(mpz_t result[], int result_length,
 		}
 
 	}
+
+	return time_elapsed;
 }
 

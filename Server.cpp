@@ -19,7 +19,7 @@ void Server::generate_files(bool debug) {
 
 	files = new mpz_t[f_size];
 
-	cout << "file size " << f_size << endl;
+	//cout << "file size " << f_size << endl;
 
 	if (debug) { // generate meaningful files for testing
 
@@ -39,7 +39,9 @@ void Server::generate_files(bool debug) {
 
 	}
 }
-void Server::get_file(mpz_t result, mpz_t s_bits[], int s_length, int parallel) {
+double Server::get_file(mpz_t result, mpz_t s_bits[], int s_length, int parallel) {
+
+	double time;
 
 	if (tree == BINARY) {
 
@@ -65,13 +67,13 @@ void Server::get_file(mpz_t result, mpz_t s_bits[], int s_length, int parallel) 
 
 			dj->set_s(i+1);
 
-			cout << "depth " << i << ", r size: " << r_size << endl;
+//			cout << "depth " << i << ", r size: " << r_size << endl;
 
 			int r_i = 0;
 
 			double start_time = omp_get_wtime();
 
-			#pragma omp parallel for if(parallel)
+			#pragma omp parallel for schedule(dynamic) if(parallel)
 			for (int j = 0; j < temp_size; j++) {
 
 				mpz_t f0, f1, subf, R0, R1, R2;
@@ -97,9 +99,7 @@ void Server::get_file(mpz_t result, mpz_t s_bits[], int s_length, int parallel) 
 
 			double end_time = omp_get_wtime();
 
-			double time_elapsed = end_time - start_time;
-
-			cout << "enc of files " << i << ": " << time_elapsed << endl;
+			time += end_time - start_time;
 
 			for (int j = 0; j < r_size; j++) {
 				mpz_clear(R[j]);
@@ -122,7 +122,7 @@ void Server::get_file(mpz_t result, mpz_t s_bits[], int s_length, int parallel) 
 
 		} // end of all depths
 
-		cout << "end of all depths, R size: " << r_size << endl;
+//		cout << "end of all depths, R size: " << r_size << endl;
 
 		mpz_set(result, R[0]);
 
@@ -130,6 +130,7 @@ void Server::get_file(mpz_t result, mpz_t s_bits[], int s_length, int parallel) 
 
 	} // end of binary case
 
+	return time;
 }
 
 void Server::init_random() {
