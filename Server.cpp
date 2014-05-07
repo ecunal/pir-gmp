@@ -12,7 +12,7 @@ Server::Server(int b_length, int s, int file_size, TreeType t, mpz_t n,
 
 	dj = new DamgardJurik(bit_length, 1, n, g);
 
-	generate_files(true);
+	generate_files(false);
 }
 
 void Server::generate_files(bool debug) {
@@ -39,9 +39,9 @@ void Server::generate_files(bool debug) {
 
 	}
 }
-double Server::get_file(mpz_t result, mpz_t s_bits[], int s_length, int parallel) {
+double Server::get_file(mpz_t result, mpz_t s_bits[], int s_length, int parallel, bool extra_prl) {
 
-	double time;
+	double time = 0;
 
 	if (tree == BINARY) {
 
@@ -67,24 +67,35 @@ double Server::get_file(mpz_t result, mpz_t s_bits[], int s_length, int parallel
 
 			dj->set_s(i+1);
 
-//			cout << "depth " << i << ", r size: " << r_size << endl;
-
-			int r_i = 0;
-
 			double start_time = omp_get_wtime();
+
+			omp_set_nested(1);
 
 			#pragma omp parallel for if(parallel)
 			for (int j = 0; j < temp_size; j++) {
 
-				mpz_t f0, f1, subf, R0, R1, R2;
-				mpz_inits(f0, f1, subf, R0, R1, R2, NULL);
+				mpz_t f0, f1, subf, R0, R1, R2, exp1, exp2;
+				mpz_inits(f0, f1, subf, R0, R1, R2, exp1, exp2, NULL);
 
-				mpz_set(f0, R[r_i]);
-				r_i++;
-				mpz_set(f1, R[r_i]);
-				r_i++;
+				mpz_set(f0, R[2*j]);
+				mpz_set(f1, R[2*j + 1]);
 
-				dj->encrypt(R0, f0);
+				if(!extra_prl) {
+					dj->encrypt(R0, f0);
+				} else {
+
+					#pragma omp parallel for
+					for(int p=0; p<2; p++) {
+						if(p == 0) {
+							dj->encrypt_exp_1(exp1, f0);
+						} else {
+							dj->encrypt_exp_2(exp2);
+						}
+					}
+
+					dj->encrypt_mult(R0, exp1, exp2);
+				}
+
 
 				mpz_sub(subf, f1, f0);
 				mpz_powm(R1, s_bits[i], subf, dj->n_sp);
@@ -94,7 +105,7 @@ double Server::get_file(mpz_t result, mpz_t s_bits[], int s_length, int parallel
 
 				mpz_set(temp[j], R2);
 
-				mpz_clears(f0, f1, subf, R0, R1, R2, NULL);
+				mpz_clears(f0, f1, subf, R0, R1, R2, exp1, exp2, NULL);
 			}
 
 			double end_time = omp_get_wtime();

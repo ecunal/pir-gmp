@@ -16,7 +16,7 @@ DamgardJurik::DamgardJurik(int bit_length, int s) {
 
 DamgardJurik::DamgardJurik(int bit_length, int s, mpz_t n, mpz_t g) {
 
-	mpz_inits(this->n, this-> g, n_s, n_sp, NULL);
+	mpz_inits(this->n, this->g, n_s, n_sp, NULL);
 
 	mpz_set(this->n, n);
 	mpz_set(this->g, g);
@@ -88,11 +88,48 @@ void DamgardJurik::init_random() {
 
 }
 
+void DamgardJurik::get_random(mpz_t result, int bit_length) {
+	mpz_urandomb(result, state, bit_length);
+}
+
 void DamgardJurik::get_random_prime(mpz_t result) {
 
 	mpz_urandomb(result, state, (bit_length / 2));
 	mpz_nextprime(result, result);
 
+}
+
+void report_num_threads(int level) {
+
+#pragma omp single
+	{
+		cout << "level " << level << ": number of threads in the team - "
+				<< omp_get_num_threads();
+	}
+
+}
+
+void DamgardJurik::encrypt_exp_1(mpz_t result, const mpz_t m) {
+
+	mpz_powm(result, g, m, n_sp);
+
+}
+
+void DamgardJurik::encrypt_exp_2(mpz_t result) {
+
+	mpz_t r;
+	mpz_init(r);
+	mpz_urandomb(r, state, bit_length);
+
+	mpz_powm(result, r, n_s, n_sp);
+
+	mpz_clear(r);
+}
+
+void DamgardJurik::encrypt_mult(mpz_t result, const mpz_t m, const mpz_t g) {
+
+	mpz_mul(result, m, g);
+	mpz_mod(result, result, n_sp);
 }
 
 void DamgardJurik::encrypt(mpz_t result, const mpz_t m) {
