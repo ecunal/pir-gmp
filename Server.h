@@ -23,5 +23,5 @@ public:
 	Server(int b_length, int s, int file_size, TreeType t, mpz_t n, mpz_t g);
 
 	// if parallel = 0 then it is iterative.
-	double get_file(mpz_t result, mpz_t s_bits[], int s_length, int parallel, bool extra_prl);
+	double get_file(mpz_t result, mpz_t s_bits[], int s_length, int parallel, int extra_prl);
 };
