@@ -51,9 +51,11 @@ double Client::encrypt_s_bits(mpz_t result[], int result_length,
 	int temp_s = max_s;
 	double time_elapsed = 0;
 
+	omp_set_nested(1);
+
 	if (tree == BINARY) {
 
-	//	cout << "binary tree, encrypting selection bits" << endl;
+		//	cout << "binary tree, encrypting selection bits" << endl;
 
 		DamgardJurik *djs[s_bit_length];
 
@@ -86,13 +88,17 @@ double Client::encrypt_s_bits(mpz_t result[], int result_length,
 
 	} else if (tree == QUAD) {
 
-		cout << "quadtree, encrypting selection bits" << endl;
+		DamgardJurik *djs[s_bit_length/2];
 
-		int r_i = result_length - 1;
+		for (int i = 0; i < s_bit_length/2; i++) {
+			djs[i] = new DamgardJurik(dj->bit_length, temp_s, dj->n, dj->g);
+			temp_s--;
+		}
 
+		double start_time = omp_get_wtime();
+
+		#pragma omp parallel for
 		for (int i = 0; i < s_bit_length; i += 2) {
-
-			dj->set_s(temp_s);
 
 			mpz_t x0, x1, x01, enc0, enc1, enc01;
 			mpz_inits(x0, x1, x01, enc0, enc1, enc01, NULL);
@@ -101,31 +107,44 @@ double Client::encrypt_s_bits(mpz_t result[], int result_length,
 			mpz_set_ui(x0, s_bits[i + 1]);
 			mpz_mul(x01, x0, x1);
 
-			dj->encrypt(enc0, x0);
-			dj->encrypt(enc1, x1);
-			dj->encrypt(enc01, x01);
+			#pragma omp parallel for
+			for (int p = 0; p < 3; p++) {
 
-			mpz_set(result[r_i], enc01);
-			r_i--;
-			mpz_set(result[r_i], enc0);
-			r_i--;
-			mpz_set(result[r_i], enc1);
-			r_i--;
+				if (p == 0) {
+					djs[i/2]->encrypt(enc0, x0);
+				} else if (p == 1) {
+					djs[i/2]->encrypt(enc1, x1);
+				} else if (p == 2) {
+					djs[i/2]->encrypt(enc01, x01);
+				}
+
+			}
+
+			mpz_set(result[result_length - (i/2) * 3 - 1], enc01);
+			mpz_set(result[result_length - (i/2) * 3 - 2], enc0);
+			mpz_set(result[result_length - (i/2) * 3 - 3], enc1);
 
 			mpz_clears(x0, x1, x01, enc0, enc1, enc01, NULL);
 
-			temp_s--;
 		}
+
+		double end_time = omp_get_wtime();
+
+		time_elapsed = end_time - start_time;
 
 	} else if (tree == OCTO) {
 
-		cout << "octree, encrypting selection bits" << endl;
+		DamgardJurik *djs[s_bit_length/3];
 
-		int r_i = result_length - 1;
+		for (int i = 0; i < s_bit_length/3; i++) {
+			djs[i] = new DamgardJurik(dj->bit_length, temp_s, dj->n, dj->g);
+			temp_s--;
+		}
 
+		double start_time = omp_get_wtime();
+
+		#pragma omp parallel for
 		for (int i = 0; i < s_bit_length; i += 3) {
-
-			dj->set_s(temp_s);
 
 			mpz_t *x = new mpz_t[7]; // 0, 1, 2, 3->01, 4->02, 5->12, 6->012
 			mpz_t *enc = new mpz_t[7];
@@ -145,19 +164,21 @@ double Client::encrypt_s_bits(mpz_t result[], int result_length,
 
 			mpz_mul(x[6], x[3], x[2]);
 
+			#pragma omp parallel for
 			for (int j = 6; j >= 0; j--) {
-				dj->encrypt(enc[j], x[j]);
-				mpz_set(result[r_i], enc[j]);
-				r_i--;
+				djs[i/3]->encrypt(enc[j], x[j]);
+				mpz_set(result[result_length - (i/3)*7 - (7-j)], enc[j]);
 			}
 
 			for (int j = 0; j < 7; j++) {
 				mpz_clear(x[j]);
 				mpz_clear(enc[j]);
 			}
-
-			temp_s--;
 		}
+
+		double end_time = omp_get_wtime();
+
+		time_elapsed = end_time - start_time;
 
 	}
 

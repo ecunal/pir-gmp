@@ -82,9 +82,9 @@ double Server::get_file(mpz_t result, mpz_t s_bits[], int s_length,
 				mpz_set(f1, R[2 * j + 1]);
 
 				#pragma omp parallel for if(extra_prl)
-				for(int p=0; p<2; p++) {
+				for (int p = 0; p < 2; p++) {
 
-					if(p == 0) {
+					if (p == 0) {
 						dj->encrypt(R0, f0);
 					} else {
 						mpz_sub(subf, f1, f0);
@@ -93,19 +93,17 @@ double Server::get_file(mpz_t result, mpz_t s_bits[], int s_length,
 
 				}
 
-
 				/*  MALLIGIMIN KANITI OLARAK DURSUN
-					#pragma omp parallel for
-					for (int p = 0; p < 2; p++) {
-						if (p == 0) {
-							dj->encrypt_exp_1(exp1, f0);
-						} else {
-							dj->encrypt_exp_2(exp2);
-						}
-					}
+				 #pragma omp parallel for
+				 for (int p = 0; p < 2; p++) {
+				 	 if (p == 0) {
+				 	 dj->encrypt_exp_1(exp1, f0);
+				 	 } else {
+				 	 dj->encrypt_exp_2(exp2);
+				 	 }
+				 }
 
-					dj->encrypt_mult(R0, exp1, exp2); */
-
+				 dj->encrypt_mult(R0, exp1, exp2); */
 
 				mpz_mul(R2, R0, R1);
 				mpz_mod(R2, R2, dj->n_sp);
@@ -144,12 +142,9 @@ double Server::get_file(mpz_t result, mpz_t s_bits[], int s_length,
 
 		delete[] R;
 
-
 		/****** END OF BINARY *****/
 
-
 	} else if (tree == QUAD) {
-
 
 		int depth = (int) (log2(f_size) / log2(4));
 
@@ -171,53 +166,52 @@ double Server::get_file(mpz_t result, mpz_t s_bits[], int s_length,
 				mpz_init(temp[j]);
 			}
 
-			dj->set_s(i+1);
+			dj->set_s(i + 1);
 
 			double start_time = omp_get_wtime();
 
 			#pragma omp parallel for if(parallel)
-			for(int j=0; j<temp_size; j++) {
+			for (int j = 0; j < temp_size; j++) {
 
 				mpz_t f0, f1, f2, f3, R0, R1, R2, R3, R00;
 				mpz_inits(f0, f1, f2, f3, R0, R1, R2, R3, R00, NULL);
 
 				mpz_t tmps[3];
 
-				for(int p=0; p<3; p++) {
+				for (int p = 0; p < 3; p++) {
 					mpz_init(tmps[p]);
 				}
 
-				mpz_set(f0, R[4*j]);
-				mpz_set(f1, R[4*j + 1]);
-				mpz_set(f2, R[4*j + 2]);
-				mpz_set(f3, R[4*j + 3]);
+				mpz_set(f0, R[4 * j]);
+				mpz_set(f1, R[4 * j + 1]);
+				mpz_set(f2, R[4 * j + 2]);
+				mpz_set(f3, R[4 * j + 3]);
 
 				// selection bits: c0: s_bits[1], c1: s_bits[0], c01: s_bits[2]
 
-
 				#pragma omp parallel for if(extra_prl)
-				for(int p=0; p<4; p++) {
+				for (int p = 0; p < 4; p++) {
 
-					if(p == 0) {
+					if (p == 0) {
 
 						dj->encrypt(R0, f0);
 
-					} else if(p == 1) {
+					} else if (p == 1) {
 
 						mpz_sub(tmps[0], f1, f0);
-						mpz_powm(R1, s_bits[3*i + 1], tmps[0], dj->n_sp);
+						mpz_powm(R1, s_bits[3 * i + 1], tmps[0], dj->n_sp);
 
-					} else if(p == 2) {
+					} else if (p == 2) {
 
 						mpz_sub(tmps[1], f2, f0);
-						mpz_powm(R2, s_bits[3*i], tmps[1], dj->n_sp);
+						mpz_powm(R2, s_bits[3 * i], tmps[1], dj->n_sp);
 
-					} else if(p == 3) {
+					} else if (p == 3) {
 
 						mpz_add(tmps[2], f3, f0);
 						mpz_sub(tmps[2], tmps[2], f2);
 						mpz_sub(tmps[2], tmps[2], f1);
-						mpz_powm(R3, s_bits[3*i + 2], tmps[2], dj->n_sp);
+						mpz_powm(R3, s_bits[3 * i + 2], tmps[2], dj->n_sp);
 
 					}
 
@@ -232,7 +226,7 @@ double Server::get_file(mpz_t result, mpz_t s_bits[], int s_length,
 
 				mpz_set(temp[j], R00);
 
-				for(int p=0; p<3; p++) {
+				for (int p = 0; p < 3; p++) {
 					mpz_clear(tmps[p]);
 				}
 
@@ -266,7 +260,162 @@ double Server::get_file(mpz_t result, mpz_t s_bits[], int s_length,
 
 		mpz_set(result, R[0]);
 
+
+
 		/******* END OF QUAD *******/
+
+
+
+
+	} else if (tree == OCTO) {
+
+
+		int depth = (int) (log2(f_size) / log2(8));
+
+		mpz_t *R = new mpz_t[f_size];
+		mpz_t *temp;
+
+		for (int i = 0; i < f_size; i++) {
+			mpz_init_set(R[i], files[i]);
+		}
+
+		int r_size = f_size, temp_size;
+
+		for (int i = 0; i < depth; i++) {
+
+			temp_size = f_size / pow(8, i + 1);
+			temp = new mpz_t[temp_size];
+
+			for (int j = 0; j < temp_size; j++) {
+				mpz_init(temp[j]);
+			}
+
+			dj->set_s(i + 1);
+
+			double start_time = omp_get_wtime();
+
+			#pragma omp parallel for if(parallel)
+			for (int j = 0; j < temp_size; j++) {
+
+				mpz_t f[8], r[8], tmps[8];
+
+				for (int p = 0; p < 8; p++) {
+					mpz_init_set(f[p], R[8 * j + p]);
+					mpz_inits(r[p], tmps[p], NULL);
+				}
+
+				#pragma omp parallel for if(extra_prl)
+				for (int p = 0; p < 8; p++) {
+
+					if (p == 0) {
+						dj->encrypt(r[p], f[0]);
+					} else if (p == 1) {
+
+						mpz_sub(tmps[p - 1], f[1], f[0]);
+						mpz_powm(r[p], s_bits[7 * i], tmps[p - 1], dj->n_sp);
+
+					} else if (p == 2) {
+
+						mpz_sub(tmps[p - 1], f[2], f[0]);
+						mpz_powm(r[p], s_bits[7 * i + 1], tmps[p - 1],
+								dj->n_sp);
+
+					} else if (p == 3) {
+
+						mpz_sub(tmps[p - 1], f[4], f[0]);
+						mpz_powm(r[p], s_bits[7 * i + 2], tmps[p - 1],
+								dj->n_sp);
+
+					} else if (p == 4) {
+
+						mpz_add(tmps[p - 1], f[3], f[0]);
+						mpz_sub(tmps[p - 1], tmps[p - 1], f[2]);
+						mpz_sub(tmps[p - 1], tmps[p - 1], f[1]);
+						mpz_powm(r[p], s_bits[7 * i + 3], tmps[p - 1],
+								dj->n_sp);
+
+					} else if (p == 5) {
+
+						mpz_add(tmps[p - 1], f[5], f[0]);
+						mpz_sub(tmps[p - 1], tmps[p - 1], f[4]);
+						mpz_sub(tmps[p - 1], tmps[p - 1], f[1]);
+						mpz_powm(r[p], s_bits[7 * i + 4], tmps[p - 1],
+								dj->n_sp);
+
+					} else if (p == 6) {
+
+						mpz_add(tmps[p - 1], f[6], f[0]);
+						mpz_sub(tmps[p - 1], tmps[p - 1], f[2]);
+						mpz_sub(tmps[p - 1], tmps[p - 1], f[4]);
+						mpz_powm(r[p], s_bits[7 * i + 5], tmps[p - 1],
+								dj->n_sp);
+
+					} else if (p == 7) {
+
+						mpz_add(tmps[p - 1], f[7], f[4]);
+						mpz_add(tmps[p - 1], tmps[p - 1], f[2]);
+						mpz_add(tmps[p - 1], tmps[p - 1], f[1]);
+
+						mpz_sub(tmps[p - 1], tmps[p - 1], f[6]);
+						mpz_sub(tmps[p - 1], tmps[p - 1], f[5]);
+						mpz_sub(tmps[p - 1], tmps[p - 1], f[3]);
+						mpz_sub(tmps[p - 1], tmps[p - 1], f[0]);
+
+						mpz_powm(r[p], s_bits[7 * i + 6], tmps[p - 1],
+								dj->n_sp);
+
+					}
+
+				}
+
+				// NOW MULTIPLY THE RESULTS
+
+				mpz_t RR;
+				mpz_init_set_ui(RR, 1);
+
+				for(int p = 0; p < 8; p++) {
+					mpz_mul(RR, RR, r[p]);
+					mpz_mod(RR, RR, dj->n_sp);
+				}
+
+				mpz_set(temp[j], RR);
+
+
+				for (int p = 0; p < 8; p++) {
+					mpz_clears(f[p], r[p], tmps[p], NULL);
+				}
+
+			} // end of for j
+
+			double end_time = omp_get_wtime();
+
+			time += end_time - start_time;
+
+			for (int j = 0; j < r_size; j++) {
+				mpz_clear(R[j]);
+			}
+
+			delete[] R;
+
+			r_size = temp_size;
+			R = new mpz_t[r_size];
+
+			for (int j = 0; j < r_size; j++) {
+				mpz_init_set(R[j], temp[j]);
+			}
+
+			for (int j = 0; j < temp_size; j++) {
+				mpz_clear(temp[j]);
+			}
+
+			delete[] temp;
+
+		}
+
+		mpz_set(result, R[0]);
+
+
+		/******* END OF OCTO ******/
 
 	}
 
