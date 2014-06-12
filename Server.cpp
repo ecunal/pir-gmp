@@ -39,6 +39,31 @@ void Server::generate_files(bool debug) {
 
 	}
 }
+
+double Server::get_file_new_p(mpz_t result, mpz_t s_bits[], int s_length) {
+
+	double time = 0;
+
+	if(tree != BINARY) {
+		cout << "other tree types are not supported yet" << endl;
+		return -1;
+	}
+
+	int depth = (int) log2(f_size);
+
+	if(depth < 3) {
+		cout << "there is no need for this method for smaller file sizes, just use other one." << endl;
+		return -1;
+	}
+
+
+
+
+
+	return time;
+}
+
+
 double Server::get_file(mpz_t result, mpz_t s_bits[], int s_length,
 		int parallel, int extra_prl) {
 
