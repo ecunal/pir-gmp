@@ -5,6 +5,8 @@
 #include <cmath>
 #include "DamgardJurik.h"
 
+#define CORE_SIZE 4
+
 class Server {
 
 private:
@@ -24,5 +26,6 @@ public:
 
 	// if parallel = 0 then it is iterative.
 	double get_file(mpz_t result, mpz_t s_bits[], int s_length, int parallel, int extra_prl);
+
 	double get_file_new_p(mpz_t result, mpz_t s_bits[], int s_length);
 };

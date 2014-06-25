@@ -8,7 +8,120 @@ using namespace std;
 
 int main() {
 
-	/*	double all_time = 0;
+	TreeType tree = QUAD;
+
+	for(int s=2; s<=4; s++) {
+
+		int file_size = (int) pow(4, s);
+		int TEST_CASES = 5;
+
+		cout << "TEST_CASES: " << TEST_CASES << endl;
+
+		double c_enc_time = 0, s_enc_time = 0, c_decr_time = 0;
+
+		for (int j = 0; j < TEST_CASES; j++) {
+
+			mpz_t n, g, cipher, decr;
+			mpz_inits(n, g, cipher, decr, NULL);
+
+			Client client(s, BIT_LENGTH, tree);
+			client.get_pub_keys(n, g);
+
+			Server server(BIT_LENGTH, s, file_size, tree, n, g);
+
+			unsigned char s_bits[2*s];
+			mpz_t *results = new mpz_t[3*s];
+
+			for (int i = 0; i < 2*s; i++) {
+				s_bits[i] = 1;
+			}
+
+			for(int i=0; i<3*s; i++) {
+				mpz_init(results[i]);
+			}
+
+			c_enc_time += client.encrypt_s_bits(results, 3*s, s_bits, 2*s);
+			s_enc_time += server.get_file_new_p(cipher, results, s); // 1: parallel
+			c_decr_time += client.decr_file(decr, cipher);
+
+			cout << "Decrypted: " << decr << endl;
+
+			mpz_clears(n, g, cipher, decr, NULL);
+
+			for (int i = 0; i < s; i++) {
+				mpz_clear(results[i]);
+			}
+
+			delete[] results;
+
+		}
+
+		cout << "file size " << file_size << endl;
+		cout << "client encryption (prl): " << (c_enc_time / TEST_CASES)
+				<< endl;
+		cout << "server encryption (prl): " << (s_enc_time / TEST_CASES)
+				<< endl;
+		cout << "client decryption: " << (c_decr_time / TEST_CASES) << "\n"
+				<< endl;
+	}
+
+
+
+/*	TreeType tree = BINARY;
+
+		for (int s = 4; s <= 8; s++) {
+
+			int file_size = (int) pow(2, s);
+
+			int TEST_CASES = 5;
+
+			cout << TEST_CASES << endl;
+
+			double c_enc_time = 0, s_enc_time = 0, c_decr_time = 0;
+
+			for (int j = 0; j < TEST_CASES; j++) {
+
+				mpz_t n, g, cipher, decr;
+				mpz_inits(n, g, cipher, decr, NULL);
+
+				Client client(s, BIT_LENGTH, tree);
+				client.get_pub_keys(n, g);
+
+				Server server(BIT_LENGTH, s, file_size, tree, n, g);
+
+				unsigned char s_bits[s];
+				mpz_t *results = new mpz_t[s];
+
+				for (int i = 0; i < s; i++) {
+					s_bits[i] = 1;
+					mpz_init(results[i]);
+				}
+
+				c_enc_time += client.encrypt_s_bits(results, s, s_bits, s);
+				s_enc_time += server.get_file_new_p(cipher, results, s); // 1: parallel
+				c_decr_time += client.decr_file(decr, cipher);
+
+				cout << decr << endl;
+
+				mpz_clears(n, g, cipher, decr, NULL);
+
+				for (int i = 0; i < s; i++) {
+					mpz_clear(results[i]);
+				}
+
+			}
+
+			cout << "file size " << file_size << endl;
+			cout << "client encryption (prl): " << (c_enc_time / TEST_CASES)
+					<< endl;
+			cout << "server encryption (prl): " << (s_enc_time / TEST_CASES)
+					<< endl;
+			cout << "client decryption: " << (c_decr_time / TEST_CASES) << "\n"
+					<< endl;
+		}
+
+
+	double all_time = 0;
 
 	 for(int i=0; i<100; i++) {
 
@@ -63,7 +176,7 @@ int main() {
 
 	 cout << i << " sth4" << endl;
 
-	 } */
+	 }
 
 	int s = (int) (log2(FILE_SIZE) / log2(8));
 	TreeType tree = OCTO;
@@ -114,7 +227,7 @@ int main() {
 	cout << "decrypted 1: " << decr1 << endl;
 //	cout << "decrypted 2: " << decr2 << endl;
 
-	mpz_clears(n, g, cipher1, cipher2, decr1, decr2, NULL);
+	mpz_clears(n, g, cipher1, cipher2, decr1, decr2, NULL); */
 
 	return 0;
 }
