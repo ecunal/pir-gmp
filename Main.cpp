@@ -51,13 +51,10 @@ int main() {
 
 	cout << "selection bits initalized" << endl;
 
-	for(int i=0; i<10; i++) {
 
-		double client_time = client.encrypt_s_bits(results, s, s_bits, s);
+	double client_time = client.encrypt_s_bits(results, s, s_bits, s);
+	cout << "selection bits generated: " << client_time << endl;
 
-		cout << "selection bits generated: " << client_time << endl;
-
-	}
 
 	server.get_file(cipher1, results, s, 0); // iterative
 	server.get_file(cipher2, results, s, 1); // parallel

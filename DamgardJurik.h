@@ -32,11 +32,16 @@ public:
 	void set_s(int s);
 
 	void encrypt(mpz_t result, const mpz_t m);
+	void encrypt_exp_1(mpz_t result, const mpz_t m);
+	void encrypt_exp_2(mpz_t result);
+	void encrypt_exp_2(mpz_t result, mpz_t r);
+	void encrypt_mult(mpz_t result, const mpz_t m, const mpz_t g);
 	
 	void find_i (mpz_t result, const mpz_t c);
 	void decrypt(mpz_t result, const mpz_t c);
 	
 	void init_random();
+	void get_random(mpz_t result, int bit_length);
 	void get_random_prime(mpz_t result);
 	
 };
