@@ -34,7 +34,6 @@ public:
 	void encrypt(mpz_t result, const mpz_t m);
 	void encrypt_exp_1(mpz_t result, const mpz_t m);
 	void encrypt_exp_2(mpz_t result);
-	void encrypt_exp_2(mpz_t result, mpz_t r);
 	void encrypt_mult(mpz_t result, const mpz_t m, const mpz_t g);
 	
 	void find_i (mpz_t result, const mpz_t c);

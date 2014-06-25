@@ -58,10 +58,13 @@ int main() {
 			double s_time = server.get_file_new_p(cipher, results, s); // NEW METHOD!
 			s_enc_time += s_time;
 			server_times.push_back(s_time);
-
 			c_decr_time += client.decr_file(decr, cipher);
 
 			mpz_clears(n, g, cipher, decr, NULL);
+
+			for (int i = 0; i < s; i++) {
+				mpz_clear(results[i]);
+			}
 
 		}
 

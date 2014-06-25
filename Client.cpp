@@ -55,6 +55,8 @@ double Client::encrypt_s_bits(mpz_t result[], int result_length,
 
 	if (tree == BINARY) {
 
+		//	cout << "binary tree, encrypting selection bits" << endl;
+
 		DamgardJurik *djs[s_bit_length];
 
 		for (int i = 0; i < s_bit_length; i++) {

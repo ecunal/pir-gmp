@@ -126,11 +126,6 @@ void DamgardJurik::encrypt_exp_2(mpz_t result) {
 	mpz_clear(r);
 }
 
-void DamgardJurik::encrypt_exp_2(mpz_t result, mpz_t r) {
-
-	mpz_powm(result, r, n_s, n_sp);
-}
-
 void DamgardJurik::encrypt_mult(mpz_t result, const mpz_t m, const mpz_t g) {
 
 	mpz_mul(result, m, g);
