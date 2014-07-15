@@ -53,9 +53,10 @@ double Client::encrypt_s_bits(mpz_t result[], int result_length,
 
 	omp_set_nested(1);
 
+	/* In binary case, there is only one level of parallelization
+	 * Since there is only 1 selection bit for each level of the tree,
+	 * Only those levels are parallelized. */
 	if (tree == BINARY) {
-
-		//	cout << "binary tree, encrypting selection bits" << endl;
 
 		DamgardJurik *djs[s_bit_length];
 
@@ -86,6 +87,11 @@ double Client::encrypt_s_bits(mpz_t result[], int result_length,
 
 		time_elapsed = end_time - start_time;
 
+
+	/* In quadratic case, there is two levels of parallelization
+	 * For each level, there are 3 independent encryptions
+	 * with approximately same computation time.
+	 * And different levels are also parallelized */
 	} else if (tree == QUAD) {
 
 		DamgardJurik *djs[s_bit_length/2];
@@ -132,6 +138,10 @@ double Client::encrypt_s_bits(mpz_t result[], int result_length,
 
 		time_elapsed = end_time - start_time;
 
+	/* In octal case, there is two levels of parallelization
+	 * For each level, there are 7 independent encryptions
+	 * with approximately same computation time.
+	 * And different levels are also parallelized */
 	} else if (tree == OCTO) {
 
 		DamgardJurik *djs[s_bit_length/3];

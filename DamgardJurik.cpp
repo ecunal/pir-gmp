@@ -99,16 +99,6 @@ void DamgardJurik::get_random_prime(mpz_t result) {
 
 }
 
-void report_num_threads(int level) {
-
-#pragma omp single
-	{
-		cout << "level " << level << ": number of threads in the team - "
-				<< omp_get_num_threads();
-	}
-
-}
-
 void DamgardJurik::encrypt_exp_1(mpz_t result, const mpz_t m) {
 
 	mpz_powm(result, g, m, n_sp);
