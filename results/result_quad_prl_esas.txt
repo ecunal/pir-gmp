@@ -1,0 +1,24 @@
+1024
+file size 4
+client encryption (seqo): 0.00786661
+server encryption (seqo): 0.0138357
+client decryption: 0.00326404
+
+512
+file size 16
+client encryption (seqo): 0.0406027
+server encryption (seqo): 0.069622
+client decryption: 0.0088076
+
+256
+file size 64
+client encryption (seqo): 0.119844
+server encryption (seqo): 0.243431
+client decryption: 0.0180158
+
+128
+file size 256
+client encryption (seqo): 0.268767
+server encryption (seqo): 0.819619
+client decryption: 0.0309552
+

@@ -1,0 +1,24 @@
+1024
+file size 4
+client encryption (sequo): 0.00793124
+server encryption (prl): 0.00369679
+client decryption: 0.00338646
+
+512
+file size 16
+client encryption (sequo): 0.0409438
+server encryption (prl): 0.0370382
+client decryption: 0.00900193
+
+256
+file size 64
+client encryption (sequo): 0.120911
+server encryption (prl): 0.151902
+client decryption: 0.0184151
+
+128
+file size 256
+client encryption (sequo): 0.269765
+server encryption (prl): 0.564829
+client decryption: 0.0317243
+

@@ -546,6 +546,7 @@ double Server::get_file_new_p(mpz_t result, mpz_t s_bits[], int s_length) {
 
 			delete[] R;
 
+//			cout << "for p = " << p << ", local time is: " << local_time << endl;
 		}
 
 		double end = omp_get_wtime();
@@ -760,8 +761,7 @@ double Server::get_file_new_p(mpz_t result, mpz_t s_bits[], int s_length) {
 
 			delete[] R;
 
-			//cout << "for p = " << p << ", local time is: " << local_time
-			//		<< endl;
+//			cout << "for p = " << p << ", local time is: " << local_time << endl;
 		}
 
 		double end = omp_get_wtime();

@@ -1,0 +1,42 @@
+
+Test Cases: 256
+Smallest time: 0.0886605
+Stop on: 0.0975343
+Count: 34
+Size was: 256
+~~~~~~~~ results ~~~~~~~~~
+file size 8
+client encryption (prl): 0.0351834
+server encryption (new method): 0.106493
+server encryption (new method - k best): 0.0944461
+client decryption: 0.0184323
+
+~~~~~~~~ end ~~~~~~~~~
+
+Test Cases: 128
+Smallest time: 0.210918
+Stop on: 0.232102
+Count: 67
+Size was: 128
+~~~~~~~~ results ~~~~~~~~~
+file size 16
+client encryption (prl): 0.0603744
+server encryption (new method): 0.232079
+server encryption (new method - k best): 0.223341
+client decryption: 0.0314216
+
+~~~~~~~~ end ~~~~~~~~~
+
+Test Cases: 64
+Smallest time: 0.471777
+Stop on: 0.528379
+Count: 63
+Size was: 64
+~~~~~~~~ results ~~~~~~~~~
+file size 32
+client encryption (prl): 0.0986936
+server encryption (new method): 0.488799
+server encryption (new method - k best): 0.488171
+client decryption: 0.0493822
+
+~~~~~~~~ end ~~~~~~~~~
