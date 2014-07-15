@@ -7,6 +7,17 @@ Client::Client(int m_s, int b_length, TreeType t) {
 	max_s = m_s;
 	tree = t;
 	bit_length = b_length;
+	scalable = false;
+
+	dj = new DamgardJurik(b_length, 1);
+}
+
+Client::Client(int m_s, int b_length, TreeType t, bool scale) {
+
+	scalable = scale;
+	max_s = (scalable) ? m_s + 1 : m_s;
+	tree = t;
+	bit_length = b_length;
 
 	dj = new DamgardJurik(b_length, 1);
 }
@@ -43,6 +54,55 @@ double Client::decr_file(mpz_t dec, mpz_t file) {
 	mpz_set(dec, decr_array[max_s - 1]);
 
 	return end_time - start_time;
+}
+
+// Only for octal trees, subtree direk hangi subtreenin istendigini tutsun
+// mpz_t arrayleri init edilmiş halde geldiğini assume etmişiz
+// bunda da öyle olsun
+double Client::get_scalable_s_bits(
+		mpz_t encr_s_bits[], int encr_s_bit_length,
+		unsigned char s_bits[], int s_bit_length,
+		mpz_t encr_subtree[], int subtree_length,
+		int selected_subtree) {
+
+	if(!scalable) {
+
+		cout << "SCALABLE ALERT: please use the other funct for previous methods" << endl;
+		return -1;
+	}
+
+
+	double time_elapsed = 0;
+
+	// Encrypt subtree selection bits
+
+	dj->set_s(1);
+
+	for(int i=0; i<subtree_length; i++) {
+
+		mpz_t bit;
+
+		if(i == selected_subtree) {
+			mpz_init_set_ui(bit, 1);
+		} else {
+			mpz_init_set_ui(bit, 0);
+		}
+
+		double start_time = omp_get_wtime();
+		dj->encrypt(encr_subtree[i], bit);
+		double end_time = omp_get_wtime();
+
+		time_elapsed += end_time - start_time;
+
+		mpz_clear(bit);
+	}
+
+	// Remaining encryptions
+
+	time_elapsed += encrypt_s_bits(encr_s_bits, encr_s_bit_length, s_bits, s_bit_length);
+
+
+	return time_elapsed;
 }
 
 double Client::encrypt_s_bits(mpz_t result[], int result_length,
@@ -149,6 +209,7 @@ double Client::encrypt_s_bits(mpz_t result[], int result_length,
 		for (int i = 0; i < s_bit_length/3; i++) {
 			djs[i] = new DamgardJurik(dj->bit_length, temp_s, dj->n, dj->g);
 			temp_s--;
+			cout << "temp_s: " << temp_s << endl;
 		}
 
 		double start_time = omp_get_wtime();

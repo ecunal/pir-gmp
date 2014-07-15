@@ -8,12 +8,59 @@ using namespace std;
 
 int main() {
 
-	TreeType tree = QUAD;
+	TreeType tree = OCTO;
 
-	for(int s=2; s<=4; s++) {
+	// scalable method denemee
 
-		int file_size = (int) pow(4, s);
-		int TEST_CASES = 5;
+	int file_size = 64;
+	int subtree_size = 8;
+	int subt_length = 8;
+
+	int s_length = 3;
+	int result_length = 7;
+
+	int selected_subtree = 3; // bu demek ki 011 ile başlıyo selection
+
+	unsigned char s_bits[s_length];
+
+	s_bits[0] = 1;
+	s_bits[1] = 0;
+	s_bits[2] = 0; // yani 011100 = 28i istiyorum
+
+	mpz_t results[result_length];
+
+	for(int i=0; i<result_length; i++) {
+		mpz_init(results[i]);
+	}
+
+	mpz_t encr_subtree[subt_length];
+
+	mpz_t n, g, cipher, decr;
+	mpz_inits(n, g, cipher, decr, NULL);
+
+	Client client(1, BIT_LENGTH, tree, true);
+	client.get_pub_keys(n, g);
+
+	double client_enc_time = client.get_scalable_s_bits(results, result_length, s_bits, s_length, encr_subtree, subt_length, selected_subtree);
+
+	Server server(BIT_LENGTH, file_size, tree, n, g, subtree_size);
+
+	double server_time = server.get_file_scalable(cipher, results, encr_subtree, subt_length);
+
+	double client_decr_time = client.decr_file(decr, cipher);
+
+	cout << "Decrypted: " << decr << endl;
+
+	cout << "client encryption (prl): " << client_enc_time << endl;
+	cout << "server encryption (prl): " << server_time << endl;
+	cout << "client decryption: " << client_decr_time << endl;
+
+	mpz_clears(n, g, cipher, decr, NULL);
+
+/*	for(int s=1; s<=1; s++) {
+
+		int file_size = (int) pow(8, s);
+		int TEST_CASES = 1;
 
 		cout << "TEST_CASES: " << TEST_CASES << endl;
 
@@ -29,19 +76,23 @@ int main() {
 
 			Server server(BIT_LENGTH, s, file_size, tree, n, g);
 
-			unsigned char s_bits[2*s];
-			mpz_t *results = new mpz_t[3*s];
+			unsigned char s_bits[3*s];
+			mpz_t *results = new mpz_t[7*s];
 
-			for (int i = 0; i < 2*s; i++) {
-				s_bits[i] = 1;
-			}
+//			for (int i = 0; i < 3*s; i++) {
+//				s_bits[i] = i;
+//			}
 
-			for(int i=0; i<3*s; i++) {
+			s_bits[0] = 0;
+			s_bits[1] = 1;
+			s_bits[2] = 1;
+
+			for(int i=0; i<7*s; i++) {
 				mpz_init(results[i]);
 			}
 
-			c_enc_time += client.encrypt_s_bits(results, 3*s, s_bits, 2*s);
-			s_enc_time += server.get_file_new_p(cipher, results, s); // 1: parallel
+			c_enc_time += client.encrypt_s_bits(results, 7*s, s_bits, 3*s);
+			s_enc_time += server.get_file(cipher, results, s, 1, 1);
 			c_decr_time += client.decr_file(decr, cipher);
 
 			cout << "Decrypted: " << decr << endl;
@@ -65,7 +116,7 @@ int main() {
 				<< endl;
 	}
 
-
+*/
 
 /*	TreeType tree = BINARY;
 

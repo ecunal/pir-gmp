@@ -2,13 +2,28 @@
 
 using namespace std;
 
-Server::Server(int b_length, int s, int file_size, TreeType t, mpz_t n,
+Server::Server(int b_length, int file_size, TreeType t, mpz_t n,
 		mpz_t g) {
 
 	bit_length = b_length;
 	f_size = file_size;
-	max_s = s;
 	tree = t;
+	subtree_size = f_size; // burdan kontrol edebiliriz scalable mı değil mi
+	scale = 0;
+
+	dj = new DamgardJurik(bit_length, 1, n, g);
+
+	generate_files(true);
+}
+
+Server::Server(int b_length, int file_size, TreeType t, mpz_t n,
+		mpz_t g, int subtree) {
+
+	bit_length = b_length;
+	f_size = file_size;
+	tree = t;
+	subtree_size = subtree;
+	scale = 1;
 
 	dj = new DamgardJurik(bit_length, 1, n, g);
 
@@ -21,7 +36,7 @@ void Server::generate_files(bool debug) {
 
 	if (debug) { // generate small meaningful files for testing
 
-		//cout << "DEBUG!!" << endl;
+		cout << "DEBUG!!" << endl;
 
 		for (int i = 0; i < f_size; i++) {
 			mpz_init_set_ui(files[i], i);
@@ -40,10 +55,75 @@ void Server::generate_files(bool debug) {
 	}
 }
 
+double Server::get_file_scalable(mpz_t result,
+		mpz_t s_bits[],
+		mpz_t subt_bits[], int subt_length) {
+
+	double time = 0;
+
+	// First, process the files with subtree selection bits
+	// new files will be like E(subtree bits)^f
+
+	mpz_t sub_files[subtree_size]; // subtree_size = subtree file size
+
+	dj->set_s(1);
+
+	double start = omp_get_wtime();
+
+#pragma omp parallel for
+	for(int i=0; i<subtree_size; i++) {
+
+		mpz_t new_f;
+		mpz_init_set_ui(new_f, 1);
+
+		for(int j=0; j<subt_length; j++) {
+
+			mpz_t temp;
+			mpz_init_set(temp, subt_bits[j]);
+			mpz_powm(temp, temp, files[i + j*subtree_size], dj->n_sp);
+
+			mpz_mul(new_f, new_f, temp);
+			mpz_clear(temp);
+		}
+
+		mpz_init_set(sub_files[i], new_f);
+		mpz_clear(new_f);
+	}
+
+	double end = omp_get_wtime();
+
+	time += end - start;
+
+	// simdi sub_files'ta collapsed subtree olması lazım.
+	// onu normal file haline getirelim ki eski versiyonu kullanabilelim
+	// simdilik
+
+	for(int i=0; i<f_size; i++) {
+		mpz_clear(files[i]);
+	}
+
+	delete[] files;
+
+	files = new mpz_t[subtree_size];
+
+	for(int i=0; i<subtree_size; i++) {
+		mpz_init_set(files[i], sub_files[i]);
+	}
+
+	f_size = subtree_size;
+
+	// file'ların değişmiş olması lazım, eski metodu kullanabilcez mi?
+	// tek sorun "s"
+
+
+	time += get_file(result, s_bits, 1, 1);
+
+	return time;
+}
 
 /************ NORMAL METHOD WITH PARALLELIZATION *************/
 
-double Server::get_file(mpz_t result, mpz_t s_bits[], int s_length,
+double Server::get_file(mpz_t result, mpz_t s_bits[],
 		int parallel, int extra_prl) {
 
 	omp_set_nested(1);
@@ -305,7 +385,7 @@ double Server::get_file(mpz_t result, mpz_t s_bits[], int s_length,
 				mpz_init(temp[j]);
 			}
 
-			dj->set_s(i + 1);
+			dj->set_s(i + 1 + scale);
 
 			double start_time = omp_get_wtime();
 
@@ -438,7 +518,7 @@ double Server::get_file(mpz_t result, mpz_t s_bits[], int s_length,
 
 /****** ALL CORES GET A PART OF THE TREE METHOD ******/
 
-double Server::get_file_new_p(mpz_t result, mpz_t s_bits[], int s_length) {
+double Server::get_file_new_p(mpz_t result, mpz_t s_bits[]) {
 
 	double time = 0;
 
@@ -546,7 +626,6 @@ double Server::get_file_new_p(mpz_t result, mpz_t s_bits[], int s_length) {
 
 			delete[] R;
 
-//			cout << "for p = " << p << ", local time is: " << local_time << endl;
 		}
 
 		double end = omp_get_wtime();
@@ -761,7 +840,8 @@ double Server::get_file_new_p(mpz_t result, mpz_t s_bits[], int s_length) {
 
 			delete[] R;
 
-//			cout << "for p = " << p << ", local time is: " << local_time << endl;
+			//cout << "for p = " << p << ", local time is: " << local_time
+			//		<< endl;
 		}
 
 		double end = omp_get_wtime();
