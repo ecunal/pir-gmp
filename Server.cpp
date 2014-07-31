@@ -1,9 +1,16 @@
 #include "Server.h"
+#include <assert.h>
 
 using namespace std;
 
-Server::Server(int b_length, int file_size, TreeType t, mpz_t n,
-		mpz_t g) {
+extern unsigned int CORE_SIZE;
+
+int isPowerOfTwo(unsigned int x)
+{
+	return ((x != 0) && !(x & (x - 1)));
+}
+
+Server::Server(int b_length, int file_size, TreeType t, mpz_t n, mpz_t g) {
 
 	bit_length = b_length;
 	f_size = file_size;
@@ -13,11 +20,11 @@ Server::Server(int b_length, int file_size, TreeType t, mpz_t n,
 
 	dj = new DamgardJurik(bit_length, 1, n, g);
 
-	generate_files(true);
+	generate_files(false);
 }
 
-Server::Server(int b_length, int file_size, TreeType t, mpz_t n,
-		mpz_t g, int subtree) {
+Server::Server(int b_length, int file_size, TreeType t, mpz_t n, mpz_t g,
+		int subtree) {
 
 	bit_length = b_length;
 	f_size = file_size;
@@ -27,7 +34,7 @@ Server::Server(int b_length, int file_size, TreeType t, mpz_t n,
 
 	dj = new DamgardJurik(bit_length, 1, n, g);
 
-	generate_files(true);
+	generate_files(false);
 }
 
 void Server::generate_files(bool debug) {
@@ -55,9 +62,10 @@ void Server::generate_files(bool debug) {
 	}
 }
 
-double Server::get_file_scalable(mpz_t result,
-		mpz_t s_bits[],
+double Server::get_file_scalable(mpz_t result, mpz_t s_bits[],
 		mpz_t subt_bits[], int subt_length) {
+
+	assert(isPowerOfTwo(CORE_SIZE));
 
 	double time = 0;
 
@@ -68,26 +76,32 @@ double Server::get_file_scalable(mpz_t result,
 
 	dj->set_s(1);
 
+	int files_per_core = subtree_size / CORE_SIZE;
+
 	double start = omp_get_wtime();
 
 #pragma omp parallel for
-	for(int i=0; i<subtree_size; i++) {
+	for (int p = 0; p < CORE_SIZE; p++) {
+		for (int i = 0; i < files_per_core; i++) {
 
-		mpz_t new_f;
-		mpz_init_set_ui(new_f, 1);
+			mpz_t new_f;
+			mpz_init_set_ui(new_f, 1);
 
-		for(int j=0; j<subt_length; j++) {
+			for (int j = 0; j < subt_length; j++) {
 
-			mpz_t temp;
-			mpz_init_set(temp, subt_bits[j]);
-			mpz_powm(temp, temp, files[i + j*subtree_size], dj->n_sp);
+				mpz_t temp;
+				mpz_init_set(temp, subt_bits[j]);
+				mpz_powm(temp, temp,
+						files[i + p * files_per_core + j * subtree_size],
+						dj->n_sp);
 
-			mpz_mul(new_f, new_f, temp);
-			mpz_clear(temp);
+				mpz_mul(new_f, new_f, temp);
+				mpz_clear(temp);
+			}
+
+			mpz_init_set(sub_files[i + p * files_per_core], new_f);
+			mpz_clear(new_f);
 		}
-
-		mpz_init_set(sub_files[i], new_f);
-		mpz_clear(new_f);
 	}
 
 	double end = omp_get_wtime();
@@ -98,7 +112,7 @@ double Server::get_file_scalable(mpz_t result,
 	// onu normal file haline getirelim ki eski versiyonu kullanabilelim
 	// simdilik
 
-	for(int i=0; i<f_size; i++) {
+	for (int i = 0; i < f_size; i++) {
 		mpz_clear(files[i]);
 	}
 
@@ -106,7 +120,7 @@ double Server::get_file_scalable(mpz_t result,
 
 	files = new mpz_t[subtree_size];
 
-	for(int i=0; i<subtree_size; i++) {
+	for (int i = 0; i < subtree_size; i++) {
 		mpz_init_set(files[i], sub_files[i]);
 	}
 
@@ -115,7 +129,6 @@ double Server::get_file_scalable(mpz_t result,
 	// file'ların değişmiş olması lazım, eski metodu kullanabilcez mi?
 	// tek sorun "s"
 
-
 	time += get_file(result, s_bits, 1, 1);
 
 	return time;
@@ -123,8 +136,8 @@ double Server::get_file_scalable(mpz_t result,
 
 /************ NORMAL METHOD WITH PARALLELIZATION *************/
 
-double Server::get_file(mpz_t result, mpz_t s_bits[],
-		int parallel, int extra_prl) {
+double Server::get_file(mpz_t result, mpz_t s_bits[], int parallel,
+		int extra_prl) {
 
 	omp_set_nested(1);
 
@@ -158,7 +171,6 @@ double Server::get_file(mpz_t result, mpz_t s_bits[],
 		 * utilizing binary trees, quadtrees, octrees and also
 		 * parallelized ones.
 		 * */
-
 
 		/* Since at the bottom of the tree we find our original files,
 		 * we instantiate the R array with those files.
@@ -515,7 +527,6 @@ double Server::get_file(mpz_t result, mpz_t s_bits[],
 	return time;
 }
 
-
 /****** ALL CORES GET A PART OF THE TREE METHOD ******/
 
 double Server::get_file_new_p(mpz_t result, mpz_t s_bits[]) {
@@ -536,7 +547,9 @@ double Server::get_file_new_p(mpz_t result, mpz_t s_bits[]) {
 			return -1;
 		}
 
-		// Until the last 2 levels, only 4 threads are created below.
+		assert(isPowerOfTwo(CORE_SIZE));
+
+		int remaining_depth = (int) log2(CORE_SIZE);
 
 		mpz_t *new_files = new mpz_t[CORE_SIZE];
 		DamgardJurik *djs[CORE_SIZE];
@@ -563,7 +576,7 @@ double Server::get_file_new_p(mpz_t result, mpz_t s_bits[]) {
 				mpz_init_set(R[i], files[p * r_size + i]);
 			}
 
-			for (int i = 0; i < depth - 2; i++) { // -2 also relative to core size
+			for (int i = 0; i < depth - remaining_depth; i++) { // -2 also relative to core size
 
 				temp_size = new_f_size / pow(2, i + 1);
 				temp = new mpz_t[temp_size];
@@ -645,7 +658,7 @@ double Server::get_file_new_p(mpz_t result, mpz_t s_bits[]) {
 
 		int r_size = CORE_SIZE, temp_size;
 
-		for (int i = depth - 2; i < depth; i++) {
+		for (int i = depth - remaining_depth; i < depth; i++) {
 
 			temp_size = f_size / pow(2, i + 1);
 			temp = new mpz_t[temp_size];
@@ -722,198 +735,256 @@ double Server::get_file_new_p(mpz_t result, mpz_t s_bits[]) {
 	else if (tree == QUAD) {
 
 		int depth = (int) (log2(f_size) / log2(4));
+		int remaining_depth = (int) ceil(log2(CORE_SIZE) / log2(4));
 
-		if (depth < 2) {
+		if (depth <= remaining_depth) {
 			cout << "no need for this method, just use other one." << endl;
 			return -1;
 		}
 
-		mpz_t outputs[4];
-		DamgardJurik *djs[4];
+		assert(isPowerOfTwo(CORE_SIZE));
 
-		for (int p = 0; p < 4; p++) {
+		int last_lvl_size = (int) pow(4, remaining_depth);
+		int file_per_core = (int) ( last_lvl_size / CORE_SIZE);
+
+		mpz_t outputs[last_lvl_size];
+		DamgardJurik *djs[CORE_SIZE];
+
+		for (int p = 0; p < CORE_SIZE; p++) {
 
 			djs[p] = new DamgardJurik(dj->bit_length, dj->s, dj->n, dj->g);
-			mpz_init(outputs[p]);
+		}
+
+		for(int INDEX=0; INDEX < last_lvl_size; INDEX++ ) {
+			mpz_init(outputs[INDEX]);
 		}
 
 		double start = omp_get_wtime();
 
 #pragma omp parallel for
-		for (int p = 0; p < 4; p++) {
+		for (int p = 0; p < CORE_SIZE; p++) {
 
-			double local_time = 0;
+			for(int y=0; y<file_per_core; y++) {
 
-			int r_size = f_size / 4, temp_size;
-			int new_f_size = f_size / 4;
+				double local_time = 0;
 
-			mpz_t *R = new mpz_t[r_size];
-			mpz_t *temp;
+				int r_size = f_size / last_lvl_size, temp_size;
+				int new_f_size = f_size / last_lvl_size;
 
-			for (int i = 0; i < r_size; i++) {
-				mpz_init_set(R[i], files[p * r_size + i]);
-			}
+				mpz_t *R = new mpz_t[r_size];
+				mpz_t *temp;
 
-			for (int i = 0; i < depth - 1; i++) { // depth -1: last level is integration
-
-				temp_size = new_f_size / pow(4, i + 1);
-				temp = new mpz_t[temp_size];
-
-				for (int j = 0; j < temp_size; j++) {
-					mpz_init(temp[j]);
+				for (int i = 0; i < r_size; i++) {
+					mpz_init_set(R[i], files[p * file_per_core * r_size + y*r_size + i]);
 				}
 
-				djs[p]->set_s(i + 1);
+				for (int i = 0; i < depth - remaining_depth; i++) { // depth -1: last level is integration
 
-				double start_time = omp_get_wtime();
+					temp_size = new_f_size / pow(4, i + 1);
+					temp = new mpz_t[temp_size];
 
-				for (int j = 0; j < temp_size; j++) {
-
-					mpz_t f0, f1, f2, f3, R0, R1, R2, R3, R00;
-					mpz_inits(f0, f1, f2, f3, R0, R1, R2, R3, R00, NULL);
-
-					mpz_t tmps[3];
-
-					for (int t = 0; t < 3; t++) {
-						mpz_init(tmps[t]);
+					for (int j = 0; j < temp_size; j++) {
+						mpz_init(temp[j]);
 					}
 
-					mpz_set(f0, R[4 * j]);
-					mpz_set(f1, R[4 * j + 1]);
-					mpz_set(f2, R[4 * j + 2]);
-					mpz_set(f3, R[4 * j + 3]);
+					djs[p]->set_s(i + 1);
 
-					djs[p]->encrypt(R0, f0);
+					double start_time = omp_get_wtime();
 
-					mpz_sub(tmps[0], f1, f0);
-					mpz_powm(R1, s_bits[3 * i + 1], tmps[0], djs[p]->n_sp);
+					for (int j = 0; j < temp_size; j++) {
 
-					mpz_sub(tmps[1], f2, f0);
-					mpz_powm(R2, s_bits[3 * i], tmps[1], djs[p]->n_sp);
+						mpz_t f0, f1, f2, f3, R0, R1, R2, R3, R00;
+						mpz_inits(f0, f1, f2, f3, R0, R1, R2, R3, R00, NULL);
 
-					mpz_add(tmps[2], f3, f0);
-					mpz_sub(tmps[2], tmps[2], f2);
-					mpz_sub(tmps[2], tmps[2], f1);
-					mpz_powm(R3, s_bits[3 * i + 2], tmps[2], djs[p]->n_sp);
+						mpz_t tmps[3];
 
-					mpz_mul(R00, R0, R1);
-					mpz_mod(R00, R00, djs[p]->n_sp);
-					mpz_mul(R00, R00, R2);
-					mpz_mod(R00, R00, djs[p]->n_sp);
-					mpz_mul(R00, R00, R3);
-					mpz_mod(R00, R00, djs[p]->n_sp);
+						for (int t = 0; t < 3; t++) {
+							mpz_init(tmps[t]);
+						}
 
-					mpz_set(temp[j], R00);
+						mpz_set(f0, R[4 * j]);
+						mpz_set(f1, R[4 * j + 1]);
+						mpz_set(f2, R[4 * j + 2]);
+						mpz_set(f3, R[4 * j + 3]);
 
-					for (int p = 0; p < 3; p++) {
-						mpz_clear(tmps[p]);
+						djs[p]->encrypt(R0, f0);
+
+						mpz_sub(tmps[0], f1, f0);
+						mpz_powm(R1, s_bits[3 * i + 1], tmps[0], djs[p]->n_sp);
+
+						mpz_sub(tmps[1], f2, f0);
+						mpz_powm(R2, s_bits[3 * i], tmps[1], djs[p]->n_sp);
+
+						mpz_add(tmps[2], f3, f0);
+						mpz_sub(tmps[2], tmps[2], f2);
+						mpz_sub(tmps[2], tmps[2], f1);
+						mpz_powm(R3, s_bits[3 * i + 2], tmps[2], djs[p]->n_sp);
+
+						mpz_mul(R00, R0, R1);
+						mpz_mod(R00, R00, djs[p]->n_sp);
+						mpz_mul(R00, R00, R2);
+						mpz_mod(R00, R00, djs[p]->n_sp);
+						mpz_mul(R00, R00, R3);
+						mpz_mod(R00, R00, djs[p]->n_sp);
+
+						mpz_set(temp[j], R00);
+
+						for (int p = 0; p < 3; p++) {
+							mpz_clear(tmps[p]);
+						}
+
+						mpz_clears(f0, f1, f2, f3, R0, R1, R2, R3, R00, NULL);
 					}
 
-					mpz_clears(f0, f1, f2, f3, R0, R1, R2, R3, R00, NULL);
+					double end_time = omp_get_wtime();
+
+					local_time += end_time - start_time;
+
+					for (int j = 0; j < r_size; j++) {
+						mpz_clear(R[j]);
+					}
+
+					delete[] R;
+
+					r_size = temp_size;
+					R = new mpz_t[r_size];
+
+					for (int j = 0; j < r_size; j++) {
+						mpz_init_set(R[j], temp[j]);
+					}
+
+					for (int j = 0; j < temp_size; j++) {
+						mpz_clear(temp[j]);
+					}
+
+					delete[] temp;
 				}
 
-				double end_time = omp_get_wtime();
-
-				local_time += end_time - start_time;
-
-				for (int j = 0; j < r_size; j++) {
-					mpz_clear(R[j]);
-				}
+				mpz_set(outputs[p*file_per_core + y], R[0]);
 
 				delete[] R;
 
-				r_size = temp_size;
-				R = new mpz_t[r_size];
+				//cout << "for p = " << p << ", local time is: " << local_time
+				//		<< endl;
 
-				for (int j = 0; j < r_size; j++) {
-					mpz_init_set(R[j], temp[j]);
-				}
-
-				for (int j = 0; j < temp_size; j++) {
-					mpz_clear(temp[j]);
-				}
-
-				delete[] temp;
 			}
 
-			mpz_set(outputs[p], R[0]);
-
-			delete[] R;
-
-			//cout << "for p = " << p << ", local time is: " << local_time
-			//		<< endl;
 		}
 
 		double end = omp_get_wtime();
 		time += end - start;
 
-		// cout << "global time: " << time << endl;
+		mpz_t *R = new mpz_t[last_lvl_size];
+		mpz_t *temp;
 
-		mpz_t f0, f1, f2, f3, R0, R1, R2, R3, R00;
-		mpz_inits(f0, f1, f2, f3, R0, R1, R2, R3, R00, NULL);
-
-		int i = depth - 1;
-
-		dj->set_s(i + 1);
-
-		mpz_t tmps[3];
-
-		for (int p = 0; p < 3; p++) {
-			mpz_init(tmps[p]);
+		for (int i = 0; i < last_lvl_size; i++) {
+			mpz_init_set(R[i], outputs[i]);
 		}
 
-		mpz_set(f0, outputs[0]);
-		mpz_set(f1, outputs[1]);
-		mpz_set(f2, outputs[2]);
-		mpz_set(f3, outputs[3]);
+		int r_size = last_lvl_size, temp_size;
 
-		start = omp_get_wtime();
+		for (int i = depth - remaining_depth; i < depth; i++) {
 
-#pragma omp parallel for
-		for (int p = 0; p < 4; p++) {
+			temp_size = f_size / pow(4, i + 1);
+			temp = new mpz_t[temp_size];
 
-			if (p == 0) {
-
-				dj->encrypt(R0, f0);
-
-			} else if (p == 1) {
-
-				mpz_sub(tmps[0], f1, f0);
-				mpz_powm(R1, s_bits[3 * i + 1], tmps[0], dj->n_sp);
-
-			} else if (p == 2) {
-
-				mpz_sub(tmps[1], f2, f0);
-				mpz_powm(R2, s_bits[3 * i], tmps[1], dj->n_sp);
-
-			} else if (p == 3) {
-
-				mpz_add(tmps[2], f3, f0);
-				mpz_sub(tmps[2], tmps[2], f2);
-				mpz_sub(tmps[2], tmps[2], f1);
-				mpz_powm(R3, s_bits[3 * i + 2], tmps[2], dj->n_sp);
-
+			for (int j = 0; j < temp_size; j++) {
+				mpz_init(temp[j]);
 			}
 
+			dj->set_s(i + 1);
+
+			double start_time = omp_get_wtime();
+
+#pragma omp parallel for
+			for (int j = 0; j < temp_size; j++) {
+
+				mpz_t f0, f1, f2, f3, R0, R1, R2, R3, R00;
+				mpz_inits(f0, f1, f2, f3, R0, R1, R2, R3, R00, NULL);
+
+				mpz_t tmps[3];
+
+				for (int p = 0; p < 3; p++) {
+					mpz_init(tmps[p]);
+				}
+
+				mpz_set(f0, R[4 * j]);
+				mpz_set(f1, R[4 * j + 1]);
+				mpz_set(f2, R[4 * j + 2]);
+				mpz_set(f3, R[4 * j + 3]);
+
+				// selection bits: c0: s_bits[1], c1: s_bits[0], c01: s_bits[2]
+
+#pragma omp parallel for
+				for (int p = 0; p < 4; p++) {
+
+					if (p == 0) {
+
+						dj->encrypt(R0, f0);
+
+					} else if (p == 1) {
+
+						mpz_sub(tmps[0], f1, f0);
+						mpz_powm(R1, s_bits[3 * i + 1], tmps[0], dj->n_sp);
+
+					} else if (p == 2) {
+
+						mpz_sub(tmps[1], f2, f0);
+						mpz_powm(R2, s_bits[3 * i], tmps[1], dj->n_sp);
+
+					} else if (p == 3) {
+
+						mpz_add(tmps[2], f3, f0);
+						mpz_sub(tmps[2], tmps[2], f2);
+						mpz_sub(tmps[2], tmps[2], f1);
+						mpz_powm(R3, s_bits[3 * i + 2], tmps[2], dj->n_sp);
+
+					}
+
+				}
+
+				mpz_mul(R00, R0, R1);
+				mpz_mod(R00, R00, dj->n_sp);
+				mpz_mul(R00, R00, R2);
+				mpz_mod(R00, R00, dj->n_sp);
+				mpz_mul(R00, R00, R3);
+				mpz_mod(R00, R00, dj->n_sp);
+
+				mpz_set(temp[j], R00);
+
+				for (int p = 0; p < 3; p++) {
+					mpz_clear(tmps[p]);
+				}
+
+				mpz_clears(f0, f1, f2, f3, R0, R1, R2, R3, R00, NULL);
+			}
+
+			double end_time = omp_get_wtime();
+
+			time += end_time - start_time;
+
+			for (int j = 0; j < r_size; j++) {
+				mpz_clear(R[j]);
+			}
+
+			delete[] R;
+
+			r_size = temp_size;
+			R = new mpz_t[r_size];
+
+			for (int j = 0; j < r_size; j++) {
+				mpz_init_set(R[j], temp[j]);
+			}
+
+			for (int j = 0; j < temp_size; j++) {
+				mpz_clear(temp[j]);
+			}
+
+			delete[] temp;
+
 		}
 
-		mpz_mul(R00, R0, R1);
-		mpz_mod(R00, R00, dj->n_sp);
-		mpz_mul(R00, R00, R2);
-		mpz_mod(R00, R00, dj->n_sp);
-		mpz_mul(R00, R00, R3);
-		mpz_mod(R00, R00, dj->n_sp);
-
-		end = omp_get_wtime();
-		time += end - start;
-
-		mpz_set(result, R00);
-
-		for (int p = 0; p < 3; p++) {
-			mpz_clear(tmps[p]);
-		}
-
-		mpz_clears(f0, f1, f2, f3, R0, R1, R2, R3, R00, NULL);
+		mpz_set(result, R[0]);
 
 	}
 
@@ -922,266 +993,328 @@ double Server::get_file_new_p(mpz_t result, mpz_t s_bits[]) {
 	else if (tree == OCTO) {
 
 		int depth = (int) (log2(f_size) / log2(8));
+		int remaining_depth = (int) ceil(log2(CORE_SIZE) / log2(8));
 
-		if (depth < 2) {
+//		cout << "depth: " << depth << "rem.depth: "<< remaining_depth << endl;
+
+		if (depth <= remaining_depth) {
 			cout << "no need for this method, just use other one." << endl;
 			return -1;
 		}
 
-		mpz_t outputs[8];
-		DamgardJurik *djs[8];
+		assert(isPowerOfTwo(CORE_SIZE));
 
-		for (int p = 0; p < 8; p++) {
+		int last_lvl_size = (int) pow(8, remaining_depth);
+		int file_per_core = (int) ( last_lvl_size / CORE_SIZE);
+
+//		cout << "last lvl size: " << last_lvl_size << "file_per_core: "<< file_per_core << endl;
+
+		mpz_t outputs[last_lvl_size];
+		DamgardJurik *djs[CORE_SIZE];
+
+		for (int p = 0; p < CORE_SIZE; p++) {
 
 			djs[p] = new DamgardJurik(dj->bit_length, dj->s, dj->n, dj->g);
-			mpz_init(outputs[p]);
+		}
+
+		for(int INDEX=0; INDEX < last_lvl_size; INDEX++ ) {
+			mpz_init(outputs[INDEX]);
 		}
 
 		double start = omp_get_wtime();
 
-		#pragma omp parallel for
-		for (int p = 0; p < 8; p++) {
+#pragma omp parallel for
+		for (int p = 0; p < CORE_SIZE; p++) {
 
-			double local_time = 0;
+			for(int y=0; y<file_per_core; y++) {
 
-			int r_size = f_size / 8, temp_size;
-			int new_f_size = f_size / 8;
+				double local_time = 0;
 
-			mpz_t *R = new mpz_t[r_size];
-			mpz_t *temp;
+				int r_size = f_size / last_lvl_size, temp_size;
+				int new_f_size = f_size / last_lvl_size;
 
-			for (int i = 0; i < r_size; i++) {
-				mpz_init_set(R[i], files[p * r_size + i]);
-			}
+				mpz_t *R = new mpz_t[r_size];
+				mpz_t *temp;
 
-			for (int i = 0; i < depth - 1; i++) { // -1: last level is integration
-
-				temp_size = new_f_size / pow(8, i + 1);
-				temp = new mpz_t[temp_size];
-
-				for (int j = 0; j < temp_size; j++) {
-					mpz_init(temp[j]);
+				for (int i = 0; i < r_size; i++) {
+					mpz_init_set(R[i], files[p * file_per_core * r_size + y*r_size + i]);
 				}
 
-				djs[p]->set_s(i + 1);
+				for (int i = 0; i < depth - remaining_depth; i++) {
 
-				double start_time = omp_get_wtime();
+					temp_size = new_f_size / pow(8, i + 1);
+					temp = new mpz_t[temp_size];
 
-				for (int j = 0; j < temp_size; j++) {
-
-					mpz_t f[8], r[8], tmps[8];
-
-					for (int t = 0; t < 8; t++) {
-
-						mpz_init_set(f[t], R[8 * j + t]);
-						mpz_inits(r[t], tmps[t], NULL);
+					for (int j = 0; j < temp_size; j++) {
+						mpz_init(temp[j]);
 					}
 
-					int x = 0;
+					djs[p]->set_s(i + 1);
 
-					djs[p]->encrypt(r[x], f[0]);
+					double start_time = omp_get_wtime();
 
-					x++;
+					for (int j = 0; j < temp_size; j++) {
 
-					mpz_sub(tmps[x], f[1], f[0]);
-					mpz_powm(r[x], s_bits[7 * i], tmps[x], djs[p]->n_sp);
+						mpz_t f[8], r[8], tmps[8];
 
-					x++;
+						for (int t = 0; t < 8; t++) {
 
-					mpz_sub(tmps[x], f[2], f[0]);
-					mpz_powm(r[x], s_bits[7 * i + 1], tmps[x],
-							djs[p]->n_sp);
+							mpz_init_set(f[t], R[8 * j + t]);
+							mpz_inits(r[t], tmps[t], NULL);
+						}
 
-					x++;
+						int x = 0;
 
-					mpz_sub(tmps[x], f[4], f[0]);
-					mpz_powm(r[x], s_bits[7 * i + 2], tmps[x],
-							djs[p]->n_sp);
+						djs[p]->encrypt(r[x], f[0]);
 
-					x++;
+						x++;
 
-					mpz_add(tmps[x], f[3], f[0]);
-					mpz_sub(tmps[x], tmps[x], f[2]);
-					mpz_sub(tmps[x], tmps[x], f[1]);
-					mpz_powm(r[x], s_bits[7 * i + 3], tmps[x],
-							djs[p]->n_sp);
+						mpz_sub(tmps[x], f[1], f[0]);
+						mpz_powm(r[x], s_bits[7 * i], tmps[x], djs[p]->n_sp);
 
-					x++;
+						x++;
 
-					mpz_add(tmps[x], f[5], f[0]);
-					mpz_sub(tmps[x], tmps[x], f[4]);
-					mpz_sub(tmps[x], tmps[x], f[1]);
-					mpz_powm(r[x], s_bits[7 * i + 4], tmps[x],
-							djs[p]->n_sp);
+						mpz_sub(tmps[x], f[2], f[0]);
+						mpz_powm(r[x], s_bits[7 * i + 1], tmps[x], djs[p]->n_sp);
 
-					x++;
+						x++;
 
-					mpz_add(tmps[x], f[6], f[0]);
-					mpz_sub(tmps[x], tmps[x], f[2]);
-					mpz_sub(tmps[x], tmps[x], f[4]);
-					mpz_powm(r[x], s_bits[7 * i + 5], tmps[x],
-							djs[p]->n_sp);
+						mpz_sub(tmps[x], f[4], f[0]);
+						mpz_powm(r[x], s_bits[7 * i + 2], tmps[x], djs[p]->n_sp);
 
-					x++;
+						x++;
 
-					mpz_add(tmps[x], f[7], f[4]);
-					mpz_add(tmps[x], tmps[x], f[2]);
-					mpz_add(tmps[x], tmps[x], f[1]);
+						mpz_add(tmps[x], f[3], f[0]);
+						mpz_sub(tmps[x], tmps[x], f[2]);
+						mpz_sub(tmps[x], tmps[x], f[1]);
+						mpz_powm(r[x], s_bits[7 * i + 3], tmps[x], djs[p]->n_sp);
 
-					mpz_sub(tmps[x], tmps[x], f[6]);
-					mpz_sub(tmps[x], tmps[x], f[5]);
-					mpz_sub(tmps[x], tmps[x], f[3]);
-					mpz_sub(tmps[x], tmps[x], f[0]);
+						x++;
 
-					mpz_powm(r[x], s_bits[7 * i + 6], tmps[x],
-							djs[p]->n_sp);
+						mpz_add(tmps[x], f[5], f[0]);
+						mpz_sub(tmps[x], tmps[x], f[4]);
+						mpz_sub(tmps[x], tmps[x], f[1]);
+						mpz_powm(r[x], s_bits[7 * i + 4], tmps[x], djs[p]->n_sp);
 
-					// NOW MULTIPLY THE RESULTS
+						x++;
 
-					mpz_t RR;
-					mpz_init_set_ui(RR, 1);
+						mpz_add(tmps[x], f[6], f[0]);
+						mpz_sub(tmps[x], tmps[x], f[2]);
+						mpz_sub(tmps[x], tmps[x], f[4]);
+						mpz_powm(r[x], s_bits[7 * i + 5], tmps[x], djs[p]->n_sp);
 
-					for (int y = 0; y < 8; y++) {
-						mpz_mul(RR, RR, r[y]);
-						mpz_mod(RR, RR, djs[y]->n_sp);
+						x++;
+
+						mpz_add(tmps[x], f[7], f[4]);
+						mpz_add(tmps[x], tmps[x], f[2]);
+						mpz_add(tmps[x], tmps[x], f[1]);
+
+						mpz_sub(tmps[x], tmps[x], f[6]);
+						mpz_sub(tmps[x], tmps[x], f[5]);
+						mpz_sub(tmps[x], tmps[x], f[3]);
+						mpz_sub(tmps[x], tmps[x], f[0]);
+
+						mpz_powm(r[x], s_bits[7 * i + 6], tmps[x], djs[p]->n_sp);
+
+						// NOW MULTIPLY THE RESULTS
+
+						mpz_t RR;
+						mpz_init_set_ui(RR, 1);
+
+						for (int t = 0; t < 8; t++) {
+							mpz_mul(RR, RR, r[t]);
+							mpz_mod(RR, RR, djs[p]->n_sp);
+						}
+
+						mpz_set(temp[j], RR);
+
+						for (int t = 0; t < 8; t++) {
+							mpz_clears(f[t], r[t], tmps[t], NULL);
+						}
+
+					} // end of for j
+
+					double end_time = omp_get_wtime();
+
+					local_time += end_time - start_time;
+
+					for (int j = 0; j < r_size; j++) {
+						mpz_clear(R[j]);
 					}
 
-					mpz_set(temp[j], RR);
+					delete[] R;
 
-					for (int y = 0; y < 8; y++) {
-						mpz_clears(f[y], r[y], tmps[y], NULL);
+					r_size = temp_size;
+					R = new mpz_t[r_size];
+
+					for (int j = 0; j < r_size; j++) {
+						mpz_init_set(R[j], temp[j]);
 					}
 
-				} // end of for j
+					for (int j = 0; j < temp_size; j++) {
+						mpz_clear(temp[j]);
+					}
 
-				double end_time = omp_get_wtime();
+					delete[] temp;
 
-				local_time += end_time - start_time;
-
-				for (int j = 0; j < r_size; j++) {
-					mpz_clear(R[j]);
 				}
+
+				mpz_set(outputs[p*file_per_core + y], R[0]);
 
 				delete[] R;
-
-				r_size = temp_size;
-				R = new mpz_t[r_size];
-
-				for (int j = 0; j < r_size; j++) {
-					mpz_init_set(R[j], temp[j]);
-				}
-
-				for (int j = 0; j < temp_size; j++) {
-					mpz_clear(temp[j]);
-				}
-
-				delete[] temp;
+				// cout << "for p = " << p << " local time is: " << local_time << endl;
 
 			}
 
-			mpz_set(outputs[p], R[0]);
-
-			delete[] R;
-			// cout << "for p = " << p << " local time is: " << local_time << endl;
-
 		}
+
+		// COLLAB AGAIN
 
 		double end = omp_get_wtime();
 		time += end - start;
 
-		// cout << "global time: " << time << endl;
+		mpz_t *R = new mpz_t[last_lvl_size];
+		mpz_t *temp;
 
-		int i = depth - 1;
-
-		dj->set_s(i + 1);
-
-		mpz_t f[8], r[8], tmps[8];
-
-		for (int p = 0; p < 8; p++) {
-			mpz_init_set(f[p], outputs[p]);
-			mpz_inits(r[p], tmps[p], NULL);
+		for (int i = 0; i < last_lvl_size; i++) {
+			mpz_init_set(R[i], outputs[i]);
 		}
 
-		start = omp_get_wtime();
+		int r_size = last_lvl_size, temp_size;
 
-#pragma omp parallel for
-		for (int p = 0; p < 8; p++) {
+		for (int i = depth - remaining_depth; i < depth; i++) {
 
-			if (p == 0) {
-				dj->encrypt(r[p], f[0]);
-			} else if (p == 1) {
+			temp_size = f_size / pow(8, i + 1);
+			temp = new mpz_t[temp_size];
 
-				mpz_sub(tmps[p - 1], f[1], f[0]);
-				mpz_powm(r[p], s_bits[7 * i], tmps[p - 1], dj->n_sp);
-
-			} else if (p == 2) {
-
-				mpz_sub(tmps[p - 1], f[2], f[0]);
-				mpz_powm(r[p], s_bits[7 * i + 1], tmps[p - 1], dj->n_sp);
-
-			} else if (p == 3) {
-
-				mpz_sub(tmps[p - 1], f[4], f[0]);
-				mpz_powm(r[p], s_bits[7 * i + 2], tmps[p - 1], dj->n_sp);
-
-			} else if (p == 4) {
-
-				mpz_add(tmps[p - 1], f[3], f[0]);
-				mpz_sub(tmps[p - 1], tmps[p - 1], f[2]);
-				mpz_sub(tmps[p - 1], tmps[p - 1], f[1]);
-				mpz_powm(r[p], s_bits[7 * i + 3], tmps[p - 1], dj->n_sp);
-
-			} else if (p == 5) {
-
-				mpz_add(tmps[p - 1], f[5], f[0]);
-				mpz_sub(tmps[p - 1], tmps[p - 1], f[4]);
-				mpz_sub(tmps[p - 1], tmps[p - 1], f[1]);
-				mpz_powm(r[p], s_bits[7 * i + 4], tmps[p - 1], dj->n_sp);
-
-			} else if (p == 6) {
-
-				mpz_add(tmps[p - 1], f[6], f[0]);
-				mpz_sub(tmps[p - 1], tmps[p - 1], f[2]);
-				mpz_sub(tmps[p - 1], tmps[p - 1], f[4]);
-				mpz_powm(r[p], s_bits[7 * i + 5], tmps[p - 1], dj->n_sp);
-
-			} else if (p == 7) {
-
-				mpz_add(tmps[p - 1], f[7], f[4]);
-				mpz_add(tmps[p - 1], tmps[p - 1], f[2]);
-				mpz_add(tmps[p - 1], tmps[p - 1], f[1]);
-
-				mpz_sub(tmps[p - 1], tmps[p - 1], f[6]);
-				mpz_sub(tmps[p - 1], tmps[p - 1], f[5]);
-				mpz_sub(tmps[p - 1], tmps[p - 1], f[3]);
-				mpz_sub(tmps[p - 1], tmps[p - 1], f[0]);
-
-				mpz_powm(r[p], s_bits[7 * i + 6], tmps[p - 1], dj->n_sp);
-
+			for (int j = 0; j < temp_size; j++) {
+				mpz_init(temp[j]);
 			}
 
+			dj->set_s(i + 1 + scale);
+
+			double start_time = omp_get_wtime();
+
+#pragma omp parallel for
+			for (int j = 0; j < temp_size; j++) {
+
+				mpz_t f[8], r[8], tmps[8];
+
+				for (int p = 0; p < 8; p++) {
+					mpz_init_set(f[p], R[8 * j + p]);
+					mpz_inits(r[p], tmps[p], NULL);
+				}
+
+#pragma omp parallel for
+				for (int p = 0; p < 8; p++) {
+
+					if (p == 0) {
+						dj->encrypt(r[p], f[0]);
+					} else if (p == 1) {
+
+						mpz_sub(tmps[p - 1], f[1], f[0]);
+						mpz_powm(r[p], s_bits[7 * i], tmps[p - 1], dj->n_sp);
+
+					} else if (p == 2) {
+
+						mpz_sub(tmps[p - 1], f[2], f[0]);
+						mpz_powm(r[p], s_bits[7 * i + 1], tmps[p - 1],
+								dj->n_sp);
+
+					} else if (p == 3) {
+
+						mpz_sub(tmps[p - 1], f[4], f[0]);
+						mpz_powm(r[p], s_bits[7 * i + 2], tmps[p - 1],
+								dj->n_sp);
+
+					} else if (p == 4) {
+
+						mpz_add(tmps[p - 1], f[3], f[0]);
+						mpz_sub(tmps[p - 1], tmps[p - 1], f[2]);
+						mpz_sub(tmps[p - 1], tmps[p - 1], f[1]);
+						mpz_powm(r[p], s_bits[7 * i + 3], tmps[p - 1],
+								dj->n_sp);
+
+					} else if (p == 5) {
+
+						mpz_add(tmps[p - 1], f[5], f[0]);
+						mpz_sub(tmps[p - 1], tmps[p - 1], f[4]);
+						mpz_sub(tmps[p - 1], tmps[p - 1], f[1]);
+						mpz_powm(r[p], s_bits[7 * i + 4], tmps[p - 1],
+								dj->n_sp);
+
+					} else if (p == 6) {
+
+						mpz_add(tmps[p - 1], f[6], f[0]);
+						mpz_sub(tmps[p - 1], tmps[p - 1], f[2]);
+						mpz_sub(tmps[p - 1], tmps[p - 1], f[4]);
+						mpz_powm(r[p], s_bits[7 * i + 5], tmps[p - 1],
+								dj->n_sp);
+
+					} else if (p == 7) {
+
+						mpz_add(tmps[p - 1], f[7], f[4]);
+						mpz_add(tmps[p - 1], tmps[p - 1], f[2]);
+						mpz_add(tmps[p - 1], tmps[p - 1], f[1]);
+
+						mpz_sub(tmps[p - 1], tmps[p - 1], f[6]);
+						mpz_sub(tmps[p - 1], tmps[p - 1], f[5]);
+						mpz_sub(tmps[p - 1], tmps[p - 1], f[3]);
+						mpz_sub(tmps[p - 1], tmps[p - 1], f[0]);
+
+						mpz_powm(r[p], s_bits[7 * i + 6], tmps[p - 1],
+								dj->n_sp);
+
+					}
+
+				}
+
+				// NOW MULTIPLY THE RESULTS
+
+				mpz_t RR;
+				mpz_init_set_ui(RR, 1);
+
+				for (int p = 0; p < 8; p++) {
+					mpz_mul(RR, RR, r[p]);
+					mpz_mod(RR, RR, dj->n_sp);
+				}
+
+				mpz_set(temp[j], RR);
+
+				for (int p = 0; p < 8; p++) {
+					mpz_clears(f[p], r[p], tmps[p], NULL);
+				}
+
+			} // end of for j
+
+			double end_time = omp_get_wtime();
+
+			time += end_time - start_time;
+
+			for (int j = 0; j < r_size; j++) {
+				mpz_clear(R[j]);
+			}
+
+			delete[] R;
+
+			r_size = temp_size;
+			R = new mpz_t[r_size];
+
+			for (int j = 0; j < r_size; j++) {
+				mpz_init_set(R[j], temp[j]);
+			}
+
+			for (int j = 0; j < temp_size; j++) {
+				mpz_clear(temp[j]);
+			}
+
+			delete[] temp;
+
 		}
 
-		// NOW MULTIPLY THE RESULTS
+		mpz_set(result, R[0]);
 
-		mpz_t RR;
-		mpz_init_set_ui(RR, 1);
-
-		for (int p = 0; p < 8; p++) {
-			mpz_mul(RR, RR, r[p]);
-			mpz_mod(RR, RR, dj->n_sp);
-		}
-
-		end = omp_get_wtime();
-		time += end - start;
-
-		mpz_set(result, RR);
-
-		for (int p = 0; p < 8; p++) {
-			mpz_clears(f[p], r[p], tmps[p], NULL);
-		}
-
-	}
+	} // end of octo
 
 	return time;
 }

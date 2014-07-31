@@ -5,8 +5,6 @@
 #include <cmath>
 #include "DamgardJurik.h"
 
-#define CORE_SIZE 4
-
 class Server {
 
 private:

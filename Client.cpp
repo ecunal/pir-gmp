@@ -209,7 +209,7 @@ double Client::encrypt_s_bits(mpz_t result[], int result_length,
 		for (int i = 0; i < s_bit_length/3; i++) {
 			djs[i] = new DamgardJurik(dj->bit_length, temp_s, dj->n, dj->g);
 			temp_s--;
-			cout << "temp_s: " << temp_s << endl;
+			// cout << "temp_s: " << temp_s << endl;
 		}
 
 		double start_time = omp_get_wtime();
