@@ -20,7 +20,7 @@ Server::Server(int b_length, int file_size, TreeType t, mpz_t n, mpz_t g) {
 
 	dj = new DamgardJurik(bit_length, 1, n, g);
 
-	generate_files(false);
+	generate_files(true);
 }
 
 Server::Server(int b_length, int file_size, TreeType t, mpz_t n, mpz_t g,
@@ -34,7 +34,7 @@ Server::Server(int b_length, int file_size, TreeType t, mpz_t n, mpz_t g,
 
 	dj = new DamgardJurik(bit_length, 1, n, g);
 
-	generate_files(false);
+	generate_files(true);
 }
 
 void Server::generate_files(bool debug) {
@@ -96,6 +96,7 @@ double Server::get_file_scalable(mpz_t result, mpz_t s_bits[],
 						dj->n_sp);
 
 				mpz_mul(new_f, new_f, temp);
+				mpz_mod(new_f, new_f, dj->n_sp);
 				mpz_clear(temp);
 			}
 
@@ -126,10 +127,7 @@ double Server::get_file_scalable(mpz_t result, mpz_t s_bits[],
 
 	f_size = subtree_size;
 
-	// file'ların değişmiş olması lazım, eski metodu kullanabilcez mi?
-	// tek sorun "s"
-
-	time += get_file(result, s_bits, 1, 1);
+	time += get_file_new_p(result, s_bits);
 
 	return time;
 }
@@ -140,6 +138,7 @@ double Server::get_file(mpz_t result, mpz_t s_bits[], int parallel,
 		int extra_prl) {
 
 	omp_set_nested(1);
+	omp_set_num_threads(CORE_SIZE);
 
 	double time = 0;
 
@@ -534,6 +533,7 @@ double Server::get_file_new_p(mpz_t result, mpz_t s_bits[]) {
 	double time = 0;
 
 	omp_set_nested(1);
+	omp_set_num_threads(CORE_SIZE);
 
 	/******************** BIN **********************/
 
