@@ -20,7 +20,7 @@ Server::Server(int b_length, int file_size, TreeType t, mpz_t n, mpz_t g) {
 
 	dj = new DamgardJurik(bit_length, 1, n, g);
 
-	generate_files(true);
+	generate_files(false);
 }
 
 Server::Server(int b_length, int file_size, TreeType t, mpz_t n, mpz_t g,
@@ -34,7 +34,7 @@ Server::Server(int b_length, int file_size, TreeType t, mpz_t n, mpz_t g,
 
 	dj = new DamgardJurik(bit_length, 1, n, g);
 
-	generate_files(true);
+	generate_files(false);
 }
 
 void Server::generate_files(bool debug) {
