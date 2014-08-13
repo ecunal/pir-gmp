@@ -895,8 +895,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	binary_new_p(1, 10);
-	quad_new_p(1, 10);
-	octo_new_p(1, 10);
+	quad_new_p(1, 6);
+	octo_new_p(1, 4);
 
 	return 0;
 }
