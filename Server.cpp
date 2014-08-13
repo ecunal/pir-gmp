@@ -542,9 +542,7 @@ double Server::get_file_new_p(mpz_t result, mpz_t s_bits[]) {
 		int depth = (int) log2(f_size);
 
 		if (depth < 3) {
-			cout << "no need for this for small file sizes, just use other one."
-					<< endl;
-			return -1;
+			return get_file(result, s_bits, 1, 1);
 		}
 
 		assert(isPowerOfTwo(CORE_SIZE));
@@ -738,8 +736,7 @@ double Server::get_file_new_p(mpz_t result, mpz_t s_bits[]) {
 		int remaining_depth = (int) ceil(log2(CORE_SIZE) / log2(4));
 
 		if (depth <= remaining_depth) {
-			cout << "no need for this method, just use other one." << endl;
-			return -1;
+			return get_file(result, s_bits, 1, 1);
 		}
 
 		assert(isPowerOfTwo(CORE_SIZE));
@@ -998,8 +995,7 @@ double Server::get_file_new_p(mpz_t result, mpz_t s_bits[]) {
 //		cout << "depth: " << depth << "rem.depth: "<< remaining_depth << endl;
 
 		if (depth <= remaining_depth) {
-			cout << "no need for this method, just use other one." << endl;
-			return -1;
+			return get_file(result, s_bits, 1, 1);
 		}
 
 		assert(isPowerOfTwo(CORE_SIZE));
