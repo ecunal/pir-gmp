@@ -840,7 +840,7 @@ void octo_scalable(int subtree_start, int subtree_end, int s) {
 
 			c_decr_time += client.decr_file(decr, cipher);
 
-			cout << "file: " << decr << endl;
+			//cout << "file: " << decr << endl;
 
 			for (int x=0; x < result_length; x++) {
 				mpz_clear(results[x]);
